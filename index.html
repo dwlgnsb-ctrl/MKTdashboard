@@ -79,8 +79,8 @@
   .pill.active{background:var(--text); border-color:var(--text); color:#fff;}
   .compare-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
   @media (max-width:700px){ .compare-grid{grid-template-columns:1fr;} }
-  .compare-box{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; max-height:420px; overflow-y:auto;}
-  .compare-box .month-label{font-size:13px; font-weight:700; margin-bottom:8px; position:sticky; top:0; background:var(--card); padding-bottom:6px;}
+  .compare-box{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px;}
+  .compare-box .month-label{font-size:13px; font-weight:700; margin-bottom:8px;}
   table.detail{width:100%; font-size:11px; border-collapse:collapse;}
   table.detail th{text-align:right; color:var(--text-sub); font-weight:600; padding:3px 2px; border-bottom:1px solid var(--border);}
   table.detail th:first-child{text-align:left;}
@@ -146,22 +146,31 @@ const CSV_URLS = Object.fromEntries(Object.entries(GIDS).map(([k,g]) => [k, gviz
 
 const CHANNEL_COLOR = { 틱톡:"#0F6E56", 메타:"#534AB7", 구글:"#993C1D" };
 
+const ISO_NAME = {
+  PL:"폴란드",KH:"캄보디아",EG:"이집트",AU:"호주",TR:"터키",AE:"아랍에미리트",VN:"베트남",ID:"인도네시아",
+  SA:"사우디아라비아",KW:"쿠웨이트",US:"미국",GB:"영국",UK:"영국",IT:"이탈리아",CO:"콜롬비아",CL:"칠레",
+  CZ:"체코",FR:"프랑스",ES:"스페인",JP:"일본",MX:"멕시코",PY:"파라과이",RO:"루마니아",UA:"우크라이나",
+  KZ:"카자흐스탄",NG:"나이지리아",ZA:"남아공",PE:"페루",AR:"아르헨티나",GR:"그리스",DE:"독일",NL:"네덜란드",
+  BE:"벨기에",PT:"포르투갈",CA:"캐나다",JO:"요르단",LB:"레바논",BH:"바레인",OM:"오만",MA:"모로코",
+  DZ:"알제리",TN:"튀니지",MY:"말레이시아",TH:"태국",PH:"필리핀",SG:"싱가포르",IN:"인도",PK:"파키스탄",
+  BD:"방글라데시",QA:"카타르",IQ:"이라크",
+};
+
 // 국가명/ISO 코드 -> 표준 국가명, 권역 매핑
 const COUNTRY_REGION = {
-  "베트남":"동남아", "인도네시아":"동남아", "말레이시아":"동남아", "캄보디아":"동남아", "필리핀":"동남아", "태국":"동남아",
-  "VN":"동남아", "ID":"동남아", "MY":"동남아", "KH":"동남아", "PH":"동남아", "TH":"동남아",
+  "베트남":"동남아", "인도네시아":"동남아", "말레이시아":"동남아", "캄보디아":"동남아", "필리핀":"동남아", "태국":"동남아", "싱가포르":"동남아",
 
   "사우디아라비아":"중동", "아랍에미리트":"중동", "쿠웨이트":"중동", "이집트":"중동", "카타르":"중동", "이라크":"중동",
-  "SA":"중동", "AE":"중동", "KW":"중동", "EG":"중동", "QA":"중동", "IQ":"중동",
+  "요르단":"중동", "레바논":"중동", "바레인":"중동", "오만":"중동", "모로코":"중동", "알제리":"중동", "튀니지":"중동",
 
   "터키":"유럽", "폴란드":"유럽", "이탈리아":"유럽", "영국":"유럽", "그리스":"유럽", "체코":"유럽", "루마니아":"유럽",
-  "우크라이나":"유럽", "카자흐스탄":"유럽",
-  "TR":"유럽", "PL":"유럽", "IT":"유럽", "GB":"유럽", "UK":"유럽", "GR":"유럽", "CZ":"유럽", "RO":"유럽", "UA":"유럽", "KZ":"유럽",
+  "우크라이나":"유럽", "카자흐스탄":"유럽", "프랑스":"유럽", "스페인":"유럽", "독일":"유럽", "네덜란드":"유럽", "벨기에":"유럽", "포르투갈":"유럽",
 
-  "칠레":"남미", "아르헨티나":"남미", "페루":"남미", "콜롬비아":"남미", "코스타리카":"남미",
-  "CL":"남미", "AR":"남미", "PE":"남미", "CO":"남미",
+  "칠레":"남미", "아르헨티나":"남미", "페루":"남미", "콜롬비아":"남미", "코스타리카":"남미", "멕시코":"남미", "파라과이":"남미",
 
-  "미국":"북미", "US":"북미", "캐나다":"북미", "CA":"북미",
+  "미국":"북미", "캐나다":"북미",
+
+  "일본":"아시아", "인도":"아시아", "파키스탄":"아시아", "방글라데시":"아시아",
 
   "나이지리아":"기타", "남아공":"기타",
 };
@@ -194,11 +203,17 @@ function extractGroupedArabicCampaign(name){
 
 function extractCountryFromCampaign(name){
   if(!name) return null;
-  // 26년 1월_02(베트남)_... 패턴
-  let m = name.match(/_\d+\(([^)]+)\)_/);
+  // "_02(베트남)_" 또는 "11월 01(이라크)_" 처럼 숫자+괄호 바로 붙는 패턴 (언더바/공백 무관)
+  let m = name.match(/\d+\s*\(([^)]+)\)/);
   if(m) return m[1];
   m = name.match(/\(([^)]+)\)_\[/);
   if(m) return m[1];
+  // 레거시 포맷: 괄호 없이 국가명이 텍스트 중간에 그대로 들어간 경우
+  // (예: "9월 팝챌린지_이집트_트래픽", "6월 3주차 사우디아라비아_틱톡_오피셜")
+  const known = Object.keys(COUNTRY_REGION);
+  for(const c of known){
+    if(name.includes(c)) return c;
+  }
   return null;
 }
 
@@ -233,7 +248,6 @@ function parseTikTok(csvText, subTag){
 function parseMeta(csvText){
   const parsed = Papa.parse(csvText, {header:true, skipEmptyLines:true});
   const rows = [];
-  const ISO_NAME = {PL:"폴란드",KH:"캄보디아",EG:"이집트",AU:"호주",TR:"터키",AE:"아랍에미리트",VN:"베트남",ID:"인도네시아",SA:"사우디아라비아",KW:"쿠웨이트",US:"미국",GB:"영국",IT:"이탈리아",CO:"콜롬비아",CL:"칠레"};
   parsed.data.forEach(r => {
     const date = r["일"];
     const countryCode = r["국가"];
