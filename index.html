@@ -116,6 +116,7 @@
 
     <section class="card">
       <div class="title">권역별 예산 비중</div>
+      <div id="world-map-wrap" style="margin-bottom:16px;"></div>
       <div class="region-grid" id="region-grid"></div>
       <div class="region-detail-grid" id="region-detail"></div>
     </section>
@@ -138,6 +139,8 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson-client/3.1.0/topojson-client.min.js"></script>
 <script>
 const SPREADSHEET_ID = "1-gZrBKjTlxhc6VCJWsFDjM6epwaGvGP5q81Dadx8SP8";
 const GIDS = { 틱톡:0, 틱톡아랍:703547167, 틱톡라탐:1724510644, 메타:1252891778, 구글:1157043789 };
@@ -155,6 +158,7 @@ const ISO_NAME = {
   DZ:"알제리",TN:"튀니지",MY:"말레이시아",TH:"태국",PH:"필리핀",SG:"싱가포르",IN:"인도",PK:"파키스탄",
   BD:"방글라데시",QA:"카타르",IQ:"이라크",SE:"스웨덴",DK:"덴마크",GE:"조지아",TW:"대만",PR:"푸에르토리코",
   NO:"노르웨이",FI:"핀란드",CH:"스위스",AT:"오스트리아",IE:"아일랜드",HU:"헝가리",BG:"불가리아",
+  HK:"홍콩",BR:"브라질",IL:"이스라엘",CR:"코스타리카",KG:"키르기스스탄",
   KU:"쿠웨이트", UAE:"아랍에미리트", // 시트에서 표준 ISO코드 대신 쓰는 비표준 축약형
 };
 
@@ -176,28 +180,99 @@ const COUNTRY_REGION = {
   "베트남":"동남아", "인도네시아":"동남아", "말레이시아":"동남아", "캄보디아":"동남아", "필리핀":"동남아", "태국":"동남아", "싱가포르":"동남아",
 
   "사우디아라비아":"중동", "아랍에미리트":"중동", "쿠웨이트":"중동", "이집트":"중동", "카타르":"중동", "이라크":"중동",
-  "요르단":"중동", "레바논":"중동", "바레인":"중동", "오만":"중동", "모로코":"중동", "알제리":"중동", "튀니지":"중동",
+  "요르단":"중동", "레바논":"중동", "바레인":"중동", "오만":"중동", "모로코":"중동", "알제리":"중동", "튀니지":"중동", "이스라엘":"중동",
 
   "터키":"유럽", "폴란드":"유럽", "이탈리아":"유럽", "영국":"유럽", "그리스":"유럽", "체코":"유럽", "루마니아":"유럽",
   "우크라이나":"유럽", "카자흐스탄":"유럽", "프랑스":"유럽", "스페인":"유럽", "독일":"유럽", "네덜란드":"유럽", "벨기에":"유럽", "포르투갈":"유럽",
-  "스웨덴":"유럽", "덴마크":"유럽", "조지아":"유럽", "노르웨이":"유럽", "핀란드":"유럽", "스위스":"유럽", "오스트리아":"유럽", "아일랜드":"유럽", "헝가리":"유럽", "불가리아":"유럽",
+  "스웨덴":"유럽", "덴마크":"유럽", "조지아":"유럽", "노르웨이":"유럽", "핀란드":"유럽", "스위스":"유럽", "오스트리아":"유럽", "아일랜드":"유럽", "헝가리":"유럽", "불가리아":"유럽", "키르기스스탄":"유럽",
 
-  "칠레":"남미", "아르헨티나":"남미", "페루":"남미", "콜롬비아":"남미", "코스타리카":"남미", "멕시코":"남미", "파라과이":"남미", "푸에르토리코":"남미",
+  "칠레":"남미", "아르헨티나":"남미", "페루":"남미", "콜롬비아":"남미", "코스타리카":"남미", "멕시코":"남미", "파라과이":"남미", "푸에르토리코":"남미", "브라질":"남미",
 
   "미국":"북미", "캐나다":"북미",
 
-  "일본":"아시아", "인도":"아시아", "파키스탄":"아시아", "방글라데시":"아시아", "대만":"아시아",
+  "일본":"아시아", "인도":"아시아", "파키스탄":"아시아", "방글라데시":"아시아", "대만":"아시아", "홍콩":"아시아",
 
   "나이지리아":"기타", "남아공":"기타",
 };
 function regionOf(country){ return COUNTRY_REGION[country] || "기타"; }
 function regionOfRow(r){ return r.region || regionOf(r.country); }
 
-const REGION_COLOR = { 동남아:"#0F6E56", 중동:"#534AB7", 유럽:"#993C1D", 남미:"#993556", 북미:"#854F0B", 기타:"#5F5E5A" };
-const REGION_BG = { 동남아:"#E1F5EE", 중동:"#EEEDFE", 유럽:"#FAECE7", 남미:"#FBEAF0", 북미:"#FAEEDA", 기타:"#F1EFE8" };
+// 국가 한글명 -> ISO-3166-1 숫자코드 (world-atlas topojson과 매칭용)
+const COUNTRY_NUMERIC = {
+  "베트남":"704","인도네시아":"360","말레이시아":"458","캄보디아":"116","필리핀":"608","태국":"764","싱가포르":"702",
+  "사우디아라비아":"682","아랍에미리트":"784","쿠웨이트":"414","이집트":"818","카타르":"634","이라크":"368","요르단":"400",
+  "레바논":"422","바레인":"48","모로코":"504","알제리":"12","튀니지":"788","이스라엘":"376",
+  "터키":"792","폴란드":"616","이탈리아":"380","영국":"826","그리스":"300","체코":"203","루마니아":"642","우크라이나":"804",
+  "카자흐스탄":"398","프랑스":"250","스페인":"724","독일":"276","네덜란드":"528","벨기에":"56","포르투갈":"620","스웨덴":"752",
+  "덴마크":"208","조지아":"268","노르웨이":"578","핀란드":"246","스위스":"756","오스트리아":"40","아일랜드":"372","헝가리":"348","불가리아":"100",
+  "칠레":"152","아르헨티나":"32","페루":"604","콜롬비아":"170","코스타리카":"188","멕시코":"484","파라과이":"600","푸에르토리코":"630","브라질":"76",
+  "미국":"840","캐나다":"124",
+  "일본":"392","인도":"356","파키스탄":"586","방글라데시":"50","대만":"158","홍콩":"344",
+  "나이지리아":"566","남아공":"710","호주":"36","키르기스스탄":"417",
+};
+const NUMERIC_TO_COUNTRY = Object.fromEntries(Object.entries(COUNTRY_NUMERIC).map(([k,v])=>[v,k]));
+
+let worldTopo = null;
+async function ensureWorldTopo(){
+  if(worldTopo) return worldTopo;
+  const res = await fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json");
+  worldTopo = await res.json();
+  return worldTopo;
+}
+
+async function renderWorldMap(byCountrySpend, totalSpend){
+  const wrap = document.getElementById("world-map-wrap");
+  let topo;
+  try{ topo = await ensureWorldTopo(); }catch(e){ wrap.innerHTML = ""; return; }
+
+  const width = wrap.clientWidth || 900, height = Math.round(width*0.5);
+  wrap.innerHTML = "";
+  const svg = d3.select(wrap).append("svg").attr("viewBox", `0 0 ${width} ${height}`).style("width","100%").style("height","auto");
+  const projection = d3.geoNaturalEarth1().fitSize([width, height], topojson.feature(topo, topo.objects.countries));
+  const path = d3.geoPath(projection);
+  const countries = topojson.feature(topo, topo.objects.countries).features;
+
+  const tooltip = d3.select(wrap).append("div")
+    .style("position","absolute").style("pointer-events","none").style("background","#2C2C2A").style("color","#fff")
+    .style("padding","4px 8px").style("border-radius","6px").style("font-size","11px").style("opacity",0).style("z-index",10);
+  wrap.style.position = "relative";
+
+  svg.selectAll("path")
+    .data(countries)
+    .join("path")
+    .attr("d", path)
+    .attr("fill", d => {
+      const name = NUMERIC_TO_COUNTRY[String(d.id)];
+      if(!name) return "#EDEAE1";
+      const reg = regionOf(name);
+      return REGION_COLOR[reg] ? (REGION_BG[reg] || "#EDEAE1") : "#EDEAE1";
+    })
+    .attr("stroke", "#fff").attr("stroke-width", 0.5)
+    .style("cursor","pointer")
+    .on("mousemove", function(evt, d){
+      const name = NUMERIC_TO_COUNTRY[String(d.id)];
+      const spend = name ? (byCountrySpend[name]||0) : 0;
+      if(!name || !spend){ tooltip.style("opacity",0); return; }
+      const p = spend/totalSpend*100;
+      const rect = wrap.getBoundingClientRect();
+      tooltip.style("opacity",1)
+        .html(`<b>${name}</b><br>${fmt(spend)} · ${p.toFixed(1)}%`)
+        .style("left", (evt.clientX-rect.left+10)+"px")
+        .style("top", (evt.clientY-rect.top+10)+"px");
+    })
+    .on("mouseleave", ()=>tooltip.style("opacity",0))
+    .on("click", function(evt, d){
+      const name = NUMERIC_TO_COUNTRY[String(d.id)];
+      if(name){ selectedRegion = regionOf(name); renderRegions(); }
+    });
+}
+
+const REGION_COLOR = { 동남아:"#0F6E56", 중동:"#534AB7", 유럽:"#993C1D", 남미:"#993556", 북미:"#854F0B", 아시아:"#185FA5", 기타:"#5F5E5A" };
+const REGION_BG = { 동남아:"#E1F5EE", 중동:"#EEEDFE", 유럽:"#FAECE7", 남미:"#FBEAF0", 북미:"#FAEEDA", 아시아:"#E6F1FB", 기타:"#F1EFE8" };
 
 let ALL_ROWS = [];
 let UNMATCHED = [];
+let UNMAPPED_COUNTRIES = [];
 
 function fmt(n){ if(n===null||n===undefined||isNaN(n)) return "–"; return Math.round(n).toLocaleString(); }
 function pct(n){ if(n===null||n===undefined||isNaN(n)) return "–"; return n.toFixed(2)+"%"; }
@@ -206,11 +281,29 @@ function num(v){ const n = parseFloat(String(v).replace(/,/g,"")); return isNaN(
 // 국가 별칭(축약형 등) 정리
 const COUNTRY_ALIAS = { "사우디":"사우디아라비아", "UK":"영국", "GB":"영국" };
 
+// 영문 국가명 -> 한글 (새 틱톡 "국가/지역" 리포트가 영문명을 씀)
+const ENGLISH_NAME = {
+  "vietnam":"베트남","indonesia":"인도네시아","malaysia":"말레이시아","cambodia":"캄보디아","philippines":"필리핀","thailand":"태국","singapore":"싱가포르",
+  "saudi arabia":"사우디아라비아","united arab emirates":"아랍에미리트","kuwait":"쿠웨이트","egypt":"이집트","qatar":"카타르","iraq":"이라크",
+  "jordan":"요르단","lebanon":"레바논","bahrain":"바레인","oman":"오만","morocco":"모로코","algeria":"알제리","tunisia":"튀니지","israel":"이스라엘",
+  "turkey":"터키","turkiye":"터키","poland":"폴란드","italy":"이탈리아","united kingdom":"영국","greece":"그리스","czechia":"체코","czech republic":"체코",
+  "romania":"루마니아","ukraine":"우크라이나","kazakhstan":"카자흐스탄","france":"프랑스","spain":"스페인","germany":"독일","netherlands":"네덜란드",
+  "belgium":"벨기에","portugal":"포르투갈","sweden":"스웨덴","denmark":"덴마크","georgia":"조지아","norway":"노르웨이","finland":"핀란드",
+  "switzerland":"스위스","austria":"오스트리아","ireland":"아일랜드","hungary":"헝가리","bulgaria":"불가리아",
+  "chile":"칠레","argentina":"아르헨티나","peru":"페루","colombia":"콜롬비아","costa rica":"코스타리카","mexico":"멕시코","paraguay":"파라과이",
+  "puerto rico":"푸에르토리코","brazil":"브라질",
+  "united states":"미국","usa":"미국","canada":"캐나다",
+  "japan":"일본","india":"인도","pakistan":"파키스탄","bangladesh":"방글라데시","taiwan":"대만","hong kong":"홍콩",
+  "nigeria":"나이지리아","south africa":"남아공","australia":"호주","kyrgyzstan":"키르기스스탄",
+};
+
 function normalizeCountry(raw){
   if(!raw) return raw;
-  const t = raw.trim();
+  const t = String(raw).trim();
   if(ISO_NAME[t]) return ISO_NAME[t];
   if(COUNTRY_ALIAS[t]) return COUNTRY_ALIAS[t];
+  const lower = t.toLowerCase();
+  if(ENGLISH_NAME[lower]) return ENGLISH_NAME[lower];
   return t; // 이미 한글 국가명이거나, 매핑 안 된 값은 그대로
 }
 
@@ -267,24 +360,28 @@ function parseCountryInfo(campaign){
 function parseTikTok(csvText, subTag){
   const parsed = Papa.parse(csvText, {header:true, skipEmptyLines:true});
   const rows = [];
+  const UNKNOWN_SEEN = new Set();
   parsed.data.forEach(r => {
-    // A~J 컬럼 고정: 계정 이름, 캠페인 이름, 광고 그룹 이름, 광고 이름, 일별, 성별, 나이, 지출, 노출수, 클릭수(목적지)
-    const campaign = r["캠페인 이름"] || "";
+    // 새 포맷: 계정 이름, 캠페인 이름, 광고 그룹 이름, 광고 이름, 일별, 국가/지역, 지출, 노출수, 클릭수(목적지), ...
     const date = normalizeDate(r["일별"]);
     const spend = num(r["지출"]);
     const impr = num(r["노출수"]);
     const clicks = num(r["클릭수(목적지)"]);
+    const rawCountry = r["국가/지역"];
     if(!date) return;
-    const info = parseCountryInfo(campaign);
-    let country, regionOverride;
-    if(info){
-      country = info.country;
-      regionOverride = info.region;
-    } else {
-      UNMATCHED.push({channel:"틱톡", sub:subTag, campaign, spend});
+
+    let country;
+    if(!rawCountry){
+      UNMATCHED.push({channel:"틱톡", sub:subTag, campaign:r["캠페인 이름"]||"", spend});
       country = "미분류";
+    } else {
+      country = normalizeCountry(rawCountry);
+      if(!COUNTRY_REGION[country] && !UNKNOWN_SEEN.has(country)){
+        UNKNOWN_SEEN.add(country);
+        UNMAPPED_COUNTRIES.push({channel:"틱톡", sub:subTag, raw:rawCountry, resolved:country});
+      }
     }
-    rows.push({channel:"틱톡", country, region:regionOverride, date, spend, impr, clicks});
+    rows.push({channel:"틱톡", country, date, spend, impr, clicks});
   });
   return rows;
 }
@@ -325,6 +422,7 @@ async function loadAll(force){
   document.getElementById("last-updated").textContent = "데이터 불러오는 중…";
   ALL_ROWS = [];
   UNMATCHED = [];
+  UNMAPPED_COUNTRIES = [];
   const FETCH_ERRORS = [];
   const bust = force ? ("&_="+Date.now()) : "";
   const entries = Object.entries(CSV_URLS);
@@ -365,7 +463,12 @@ function renderWarnings(fetchErrors){
   }
   if(UNMATCHED.length > 0){
     const totalSpend = UNMATCHED.reduce((a,b)=>a+b.spend,0);
-    html += `<div class="warn-box">⚠ 캠페인명에서 국가를 파싱하지 못한 행이 ${UNMATCHED.length}건 있습니다 (지출 합계 ${fmt(totalSpend)}원). 원본 시트의 캠페인명 형식을 확인해주세요.</div>`;
+    const samples = Array.from(new Set(UNMATCHED.map(u=>u.campaign))).slice(0,5);
+    html += `<div class="warn-box">⚠ 국가/지역 값이 비어있는 행이 ${UNMATCHED.length}건 있습니다 (지출 합계 ${fmt(totalSpend)}원).<br>샘플 캠페인명: ${samples.map(s=>`<code style="font-size:10px;">${s}</code>`).join(" · ")}</div>`;
+  }
+  if(UNMAPPED_COUNTRIES.length > 0){
+    const list = UNMAPPED_COUNTRIES.map(u=>`"${u.raw}"→${u.resolved}`).join(", ");
+    html += `<div class="warn-box">ℹ 사전에 없는 국가값이 있어 "기타"로 분류됩니다: ${list}<br>알려주시면 매핑표에 추가할게요.</div>`;
   }
   area.innerHTML = html;
 }
@@ -498,6 +601,10 @@ function renderRegions(){
     byRegion[reg].countries[r.country] = (byRegion[reg].countries[r.country]||0) + r.spend;
   });
   const totalSpend = Object.values(byRegion).reduce((a,b)=>a+b.spend,0) || 1;
+
+  const byCountrySpend = {};
+  rows.forEach(r => { byCountrySpend[r.country] = (byCountrySpend[r.country]||0) + r.spend; });
+  renderWorldMap(byCountrySpend, totalSpend);
 
   const grid = document.getElementById("region-grid");
   grid.innerHTML = "";
