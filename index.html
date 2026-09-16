@@ -76,7 +76,17 @@
   .warn-box{background:#FFF7E8; border:1px solid #F0D89A; border-radius:8px; padding:10px 14px; font-size:12px; color:#7A5B10; margin-bottom:16px;}
   .filter-pill-row{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;}
   .pill{border:1px solid var(--border); background:var(--card); padding:5px 12px; border-radius:20px; font-size:12px; cursor:pointer; color:var(--text-sub); font-weight:600;}
-  .pill.active{background:var(--text); border-color:var(--text); color:#fff;}
+  .pill.active{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .tier-card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-top:12px;}
+  #tier-table{width:100%; border-collapse:collapse; font-size:13px;}
+  #tier-table th{text-align:right; padding:8px 6px; font-size:11px; color:var(--text-sub); font-weight:600; background:#FAF8F2; border-bottom:1px solid var(--border);}
+  #tier-table th:nth-child(1),#tier-table th:nth-child(2),#tier-table th:nth-child(3){text-align:left;}
+  #tier-table td{padding:7px 6px; border-bottom:1px solid var(--border);}
+  #tier-table tr:hover td{background:var(--accent-bg);}
+  .tier-pill{display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:12px;}
+  .tier-pill.t1{background:#FAEEDA; color:#854F0B;}
+  .tier-pill.t2{background:#E1F5EE; color:#0F6E56;}
+  .tier-pill.t3{background:#EEEDFE; color:#534AB7;}
   .compare-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
   @media (max-width:700px){ .compare-grid{grid-template-columns:1fr;} }
   .compare-box{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px;}
@@ -135,8 +145,10 @@
       <select id="month-select" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border);"></select>
       <span style="font-size:11px; color:var(--text-mute); margin-left:8px;">지표를 클릭하면 1~12월 추이 팝업이 뜹니다</span>
     </div>
-    <div style="overflow-x:auto;">
-      <table class="detail" style="min-width:680px;" id="tier-table"></table>
+    <div class="tier-card">
+      <div style="overflow-x:auto;">
+        <table style="min-width:680px;" id="tier-table"></table>
+      </div>
     </div>
     <div id="modal-root"></div>
   </div>
@@ -283,8 +295,8 @@ async function renderWorldMap(byCountrySpend, totalSpend){
         if(name){ selectedRegion = regionOf(name); renderRegions(); }
       });
 
-    // 티어 국가는 항상 라벨 표시(티어별 크기 차등), 남는 자리는 지출 상위 국가로 보완
-    const MAX_LABELS = 30;
+    // 티어1/2만 라벨 대상, 티어3+지출상위는 점만 (호버로 정보 확인)
+    const MAX_DOTS = 30;
     const tierEntries = Object.keys(COUNTRY_TIER)
       .filter(c => (byCountrySpend[c]||0) > 0 && COUNTRY_NUMERIC[c])
       .sort((a,b) => COUNTRY_TIER[a]-COUNTRY_TIER[b]);
@@ -292,19 +304,47 @@ async function renderWorldMap(byCountrySpend, totalSpend){
       .filter(([c,v]) => v > 0 && COUNTRY_NUMERIC[c] && !COUNTRY_TIER[c])
       .sort((a,b) => b[1]-a[1])
       .map(([c]) => c);
-    const fillSlots = Math.max(0, MAX_LABELS - tierEntries.length);
-    const labelCountries = [...tierEntries, ...topSpendFill.slice(0, fillSlots)];
-    const topSet = new Set(labelCountries);
-    const labelFeatures = countries.filter(d => topSet.has(NUMERIC_TO_COUNTRY[String(d.id)]));
+    const fillSlots = Math.max(0, MAX_DOTS - tierEntries.length);
+    const dotCountries = [...tierEntries, ...topSpendFill.slice(0, fillSlots)];
+    const dotSet = new Set(dotCountries);
+    const dotFeatures = countries.filter(d => dotSet.has(NUMERIC_TO_COUNTRY[String(d.id)]));
 
-    // 지출 상위/티어 국가 라벨 좌표 계산
+    // 점(모든 대상 국가)
+    svg.selectAll("circle.country-dot")
+      .data(dotFeatures)
+      .join("circle")
+      .attr("class","country-dot")
+      .attr("cx", d => path.centroid(d)[0])
+      .attr("cy", d => path.centroid(d)[1])
+      .attr("r", d => { const t = COUNTRY_TIER[NUMERIC_TO_COUNTRY[String(d.id)]]; return t===1?5:t===2?4:3; })
+      .attr("fill", d => { const t = COUNTRY_TIER[NUMERIC_TO_COUNTRY[String(d.id)]]; return t===1?"#D85A30":t===2?"#0F6E56":"#534AB7"; })
+      .attr("stroke","#fff").attr("stroke-width",1.2)
+      .style("cursor","pointer")
+      .on("mousemove", function(evt, d){
+        const name = NUMERIC_TO_COUNTRY[String(d.id)];
+        const spend = byCountrySpend[name]||0;
+        const p = spend/totalSpend*100;
+        const rect = wrap.getBoundingClientRect();
+        tooltip.style("opacity",1)
+          .html(`<b>${name}</b>${COUNTRY_TIER[name]?' [T'+COUNTRY_TIER[name]+']':''}<br>${fmt(spend)} · ${p.toFixed(1)}%`)
+          .style("left", (evt.clientX-rect.left+10)+"px")
+          .style("top", (evt.clientY-rect.top+10)+"px");
+      })
+      .on("mouseleave", ()=>tooltip.style("opacity",0))
+      .on("click", function(evt, d){
+        const name = NUMERIC_TO_COUNTRY[String(d.id)];
+        if(name){ selectedRegion = regionOf(name); renderRegions(); }
+      });
+
+    // 티어1/2만 텍스트 라벨 (서로 멀리 떨어져 있는 편이라 클러스터링 부담 적음)
+    const labelCountries = tierEntries.filter(c => COUNTRY_TIER[c] <= 2);
+    const labelFeatures = countries.filter(d => labelCountries.includes(NUMERIC_TO_COUNTRY[String(d.id)]));
     const labelPoints = labelFeatures.map(d => {
       const name = NUMERIC_TO_COUNTRY[String(d.id)];
       const [x,y] = path.centroid(d);
       return { name, x, y };
     }).filter(p => isFinite(p.x) && isFinite(p.y));
 
-    // 가까운 점끼리 클러스터로 묶기
     function clusterPoints(pts, threshold){
       const used = new Array(pts.length).fill(false);
       const clusters = [];
@@ -320,9 +360,8 @@ async function renderWorldMap(byCountrySpend, totalSpend){
       }
       return clusters;
     }
-    const clusters = clusterPoints(labelPoints, 30);
+    const clusters = clusterPoints(labelPoints, 26);
 
-    // 클러스터가 2개 이상이면 겹치니까 위쪽으로 펼쳐서 인출선으로 연결 (4개 이상이면 2열로)
     const placed = [];
     clusters.forEach(cluster => {
       if(cluster.length === 1){
@@ -330,22 +369,16 @@ async function renderWorldMap(byCountrySpend, totalSpend){
         return;
       }
       const cx = d3.mean(cluster, p=>p.x), topY = d3.min(cluster, p=>p.y);
-      const anchorY = topY - 46;
+      const anchorY = topY - 56;
       const sorted = [...cluster].sort((a,b) => (COUNTRY_TIER[a.name]||9) - (COUNTRY_TIER[b.name]||9));
-      const twoCol = sorted.length >= 4;
       sorted.forEach((p, i) => {
-        const col = twoCol ? (i % 2) : 0;
-        const row = twoCol ? Math.floor(i/2) : i;
-        const lx = twoCol ? cx + (col===0 ? -58 : 58) : cx;
-        const ly = anchorY - row*32;
-        placed.push({...p, lx, ly, leader:true});
+        placed.push({...p, lx:cx, ly:anchorY - i*20, leader:true});
       });
     });
 
-    const FONT_SIZE = { 1:{name:14, amt:11}, 2:{name:11.5, amt:9.5}, 3:{name:10, amt:8.5}, none:{name:9.5, amt:8} };
-    function sizeFor(name){ const t = COUNTRY_TIER[name]; return FONT_SIZE[t] || FONT_SIZE.none; }
+    const FONT_SIZE = { 1:{name:14}, 2:{name:10.5} };
+    function sizeFor(name){ return (FONT_SIZE[COUNTRY_TIER[name]] || FONT_SIZE[2]).name; }
 
-    // 인출선
     svg.selectAll("line.leader")
       .data(placed.filter(p=>p.leader))
       .join("line")
@@ -363,17 +396,17 @@ async function renderWorldMap(byCountrySpend, totalSpend){
 
     labelGroup.append("text")
       .attr("text-anchor","middle")
-      .attr("dy","-2px")
-      .style("font-size", p => sizeFor(p.name).name + "px")
+      .attr("dy", p => COUNTRY_TIER[p.name]===1 ? "-8px" : "-2px")
+      .style("font-size", p => sizeFor(p.name) + "px")
       .style("font-weight","700")
       .style("paint-order","stroke").style("stroke","#fff").style("stroke-width","3px")
       .style("fill","#2C2C2A")
-      .text(p => (COUNTRY_TIER[p.name] ? `[T${COUNTRY_TIER[p.name]}] ` : "") + p.name);
+      .text(p => `[T${COUNTRY_TIER[p.name]}] ${p.name}`);
 
-    labelGroup.append("text")
+    labelGroup.filter(p => COUNTRY_TIER[p.name]===1).append("text")
       .attr("text-anchor","middle")
-      .attr("dy", p => sizeFor(p.name).amt + "px")
-      .style("font-size", p => sizeFor(p.name).amt + "px")
+      .attr("dy","9px")
+      .style("font-size","11px")
       .style("paint-order","stroke").style("stroke","#fff").style("stroke-width","3px")
       .style("fill","#6B6A63")
       .text(p => {
@@ -849,24 +882,23 @@ function renderTierTable(){
   entries.sort((a,b) => (a.tier||9)-(b.tier||9) || b.m.spend-a.m.spend);
 
   const table = document.getElementById("tier-table");
-  table.innerHTML = `<tr><th>티어</th><th style="text-align:left;">권역</th><th style="text-align:left;">국가</th><th>노출</th><th>클릭</th><th>CPC</th><th>CPM</th><th>CTR</th></tr>`;
+  table.innerHTML = `<tr><th>티어</th><th>권역</th><th>국가</th><th>노출</th><th>클릭</th><th>CPC</th><th>CPM</th><th>CTR</th></tr>`;
   entries.forEach(e => {
-    const st = e.tier ? TIER_STYLE[e.tier] : {bg:"transparent", label:"–"};
+    const tierLabel = e.tier ? `<span class="tier-pill t${e.tier}">T${e.tier}</span>` : `<span style="color:var(--text-mute); font-size:11px;">–</span>`;
     const tr = document.createElement("tr");
-    tr.style.background = st.bg;
-    const cell = (metric, val, disp) => {
+    const cell = (metric, disp) => {
       const td = document.createElement("td");
       td.textContent = disp;
-      td.style.color = "var(--text-accent)"; td.style.cursor = "pointer"; td.style.textDecoration = "underline";
+      td.style.textAlign = "right"; td.style.color = "var(--accent)"; td.style.cursor = "pointer"; td.style.textDecoration = "underline"; td.style.textDecorationColor = "var(--border)";
       td.onclick = () => openMetricModal(e.country, metric);
       return td;
     };
-    tr.innerHTML = `<td style="font-weight:500; color:${st.color||'var(--text-primary)'};">${st.label}</td><td style="text-align:left; color:var(--text-secondary);">${e.region}</td><td style="text-align:left;">${e.country}</td>`;
-    tr.appendChild(cell("impr", e.m.impr, fmt(e.m.impr)));
-    tr.appendChild(cell("clicks", e.m.clicks, fmt(e.m.clicks)));
-    tr.appendChild(cell("cpc", e.m.cpc, fmt(e.m.cpc)));
-    tr.appendChild(cell("cpm", e.m.cpm, fmt(e.m.cpm)));
-    tr.appendChild(cell("ctr", e.m.ctr, pct(e.m.ctr)));
+    tr.innerHTML = `<td>${tierLabel}</td><td style="color:var(--text-sub);">${e.region}</td><td style="font-weight:600;">${e.country}</td>`;
+    tr.appendChild(cell("impr", fmt(e.m.impr)));
+    tr.appendChild(cell("clicks", fmt(e.m.clicks)));
+    tr.appendChild(cell("cpc", fmt(e.m.cpc)));
+    tr.appendChild(cell("cpm", fmt(e.m.cpm)));
+    tr.appendChild(cell("ctr", pct(e.m.ctr)));
     table.appendChild(tr);
   });
 }
