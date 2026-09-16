@@ -153,7 +153,8 @@ const ISO_NAME = {
   KZ:"카자흐스탄",NG:"나이지리아",ZA:"남아공",PE:"페루",AR:"아르헨티나",GR:"그리스",DE:"독일",NL:"네덜란드",
   BE:"벨기에",PT:"포르투갈",CA:"캐나다",JO:"요르단",LB:"레바논",BH:"바레인",OM:"오만",MA:"모로코",
   DZ:"알제리",TN:"튀니지",MY:"말레이시아",TH:"태국",PH:"필리핀",SG:"싱가포르",IN:"인도",PK:"파키스탄",
-  BD:"방글라데시",QA:"카타르",IQ:"이라크",
+  BD:"방글라데시",QA:"카타르",IQ:"이라크",SE:"스웨덴",DK:"덴마크",GE:"조지아",TW:"대만",PR:"푸에르토리코",
+  NO:"노르웨이",FI:"핀란드",CH:"스위스",AT:"오스트리아",IE:"아일랜드",HU:"헝가리",BG:"불가리아",
 };
 
 // 국가명/ISO 코드 -> 표준 국가명, 권역 매핑
@@ -165,12 +166,13 @@ const COUNTRY_REGION = {
 
   "터키":"유럽", "폴란드":"유럽", "이탈리아":"유럽", "영국":"유럽", "그리스":"유럽", "체코":"유럽", "루마니아":"유럽",
   "우크라이나":"유럽", "카자흐스탄":"유럽", "프랑스":"유럽", "스페인":"유럽", "독일":"유럽", "네덜란드":"유럽", "벨기에":"유럽", "포르투갈":"유럽",
+  "스웨덴":"유럽", "덴마크":"유럽", "조지아":"유럽", "노르웨이":"유럽", "핀란드":"유럽", "스위스":"유럽", "오스트리아":"유럽", "아일랜드":"유럽", "헝가리":"유럽", "불가리아":"유럽",
 
-  "칠레":"남미", "아르헨티나":"남미", "페루":"남미", "콜롬비아":"남미", "코스타리카":"남미", "멕시코":"남미", "파라과이":"남미",
+  "칠레":"남미", "아르헨티나":"남미", "페루":"남미", "콜롬비아":"남미", "코스타리카":"남미", "멕시코":"남미", "파라과이":"남미", "푸에르토리코":"남미",
 
   "미국":"북미", "캐나다":"북미",
 
-  "일본":"아시아", "인도":"아시아", "파키스탄":"아시아", "방글라데시":"아시아",
+  "일본":"아시아", "인도":"아시아", "파키스탄":"아시아", "방글라데시":"아시아", "대만":"아시아",
 
   "나이지리아":"기타", "남아공":"기타",
 };
@@ -187,33 +189,64 @@ function fmt(n){ if(n===null||n===undefined||isNaN(n)) return "–"; return Math
 function pct(n){ if(n===null||n===undefined||isNaN(n)) return "–"; return n.toFixed(2)+"%"; }
 function num(v){ const n = parseFloat(String(v).replace(/,/g,"")); return isNaN(n)?0:n; }
 
-const ARABIC_CODE_NAME = { SA:"사우디아라비아", UAE:"아랍에미리트", KU:"쿠웨이트", QA:"카타르", EG:"이집트" };
+// 국가 별칭(축약형 등) 정리
+const COUNTRY_ALIAS = { "사우디":"사우디아라비아", "UK":"영국", "GB":"영국" };
 
-// [강 - SA UAE] / [약 - KU QA EG] 같은 통합집행 캠페인명 처리.
-// 이 패턴은 여러 국가를 한 캠페인으로 묶어 집행한 것이라 국가별로 지출을 쪼갤 근거가 없음.
-// 대신 권역(중동)은 정확히 귀속시키고, 국가명 대신 "통합집행" 라벨을 붙여 투명하게 표시.
-function extractGroupedArabicCampaign(name){
-  if(!name) return null;
-  const m = name.match(/\[(?:강|약)\s*-\s*([A-Z]+(?:\s+[A-Z]+)*)\]/);
-  if(!m) return null;
-  const codes = m[1].trim().split(/\s+/);
-  const names = codes.map(c => ARABIC_CODE_NAME[c] || c);
-  return { label: names.join("+") + "(통합집행)", region: "중동" };
+function normalizeCountry(raw){
+  if(!raw) return raw;
+  const t = raw.trim();
+  if(ISO_NAME[t]) return ISO_NAME[t];
+  if(COUNTRY_ALIAS[t]) return COUNTRY_ALIAS[t];
+  return t; // 이미 한글 국가명이거나, 매핑 안 된 값은 그대로
 }
 
-function extractCountryFromCampaign(name){
-  if(!name) return null;
-  // "_02(베트남)_" 또는 "11월 01(이라크)_" 처럼 숫자+괄호 바로 붙는 패턴 (언더바/공백 무관)
-  let m = name.match(/\d+\s*\(([^)]+)\)/);
-  if(m) return m[1];
-  m = name.match(/\(([^)]+)\)_\[/);
-  if(m) return m[1];
-  // 레거시 포맷: 괄호 없이 국가명이 텍스트 중간에 그대로 들어간 경우
-  // (예: "9월 팝챌린지_이집트_트래픽", "6월 3주차 사우디아라비아_틱톡_오피셜")
+function regionFromNames(names){
+  const counts = {};
+  names.forEach(n => { const r = COUNTRY_REGION[n]; if(r) counts[r]=(counts[r]||0)+1; });
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  return entries.length ? entries[0][0] : "기타";
+}
+
+// 캠페인명 하나에서 {country, region} 을 뽑아낸다. 못 찾으면 null.
+function parseCountryInfo(campaign){
+  if(!campaign) return null;
+
+  // 1) "(Arabic강)", "(Arabic약)", "(Arabic)", "(Latam강)", "(Latam약)" — 구체 국가 없는 권역 플레이스홀더
+  let m = campaign.match(/\((Arabic|Latam)(강|약)?\)/i);
+  if(m){
+    const region = m[1].toLowerCase()==="arabic" ? "중동" : "남미";
+    return { country: (m[1]==="Arabic"?"아랍권":"라틴아메리카") + " 통합집행(세부미분류)", region };
+  }
+
+  // 2) "[강 - SA UAE]" / "[약 - KU QA EG]" / 라탐탭의 "[강 - MX CL PR]" 등 코드 나열형 통합집행
+  m = campaign.match(/\[(?:강|약)\s*-\s*([A-Z]+(?:\s+[A-Z]+)*)\]/);
+  if(m){
+    const codes = m[1].trim().split(/\s+/);
+    const names = codes.map(c => normalizeCountry(c));
+    const region = regionFromNames(names);
+    return { country: names.join("+") + "(통합집행)", region };
+  }
+
+  // 3) "_02(베트남)_" 또는 "11월 01(이라크)_" 처럼 숫자+괄호 붙는 표준 패턴
+  m = campaign.match(/\d+\s*\(([^)]+)\)/);
+  if(m){
+    const country = normalizeCountry(m[1]);
+    return { country, region: regionOf(country) };
+  }
+
+  // 4) "(국가명)_[" 패턴 — 알려진 국가/코드일 때만 인정 (아니면 쓰레기값 방지)
+  m = campaign.match(/\(([^)]+)\)_\[/);
+  if(m){
+    const country = normalizeCountry(m[1]);
+    if(COUNTRY_REGION[country] || ISO_NAME[m[1]]) return { country, region: regionOf(country) };
+  }
+
+  // 5) 레거시: 괄호 없이 국가명이 텍스트 중간에 그대로 들어간 경우
   const known = Object.keys(COUNTRY_REGION);
   for(const c of known){
-    if(name.includes(c)) return c;
+    if(campaign.includes(c)) return { country:c, region:regionOf(c) };
   }
+
   return null;
 }
 
@@ -228,17 +261,14 @@ function parseTikTok(csvText, subTag){
     const impr = num(r["노출수"]);
     const clicks = num(r["클릭수(목적지)"]);
     if(!date) return;
-    let country = extractCountryFromCampaign(campaign);
-    let regionOverride = null;
-    if(!country){
-      const grouped = extractGroupedArabicCampaign(campaign);
-      if(grouped){
-        country = grouped.label;
-        regionOverride = grouped.region;
-      } else {
-        UNMATCHED.push({channel:"틱톡", sub:subTag, campaign, spend});
-        country = "미분류";
-      }
+    const info = parseCountryInfo(campaign);
+    let country, regionOverride;
+    if(info){
+      country = info.country;
+      regionOverride = info.region;
+    } else {
+      UNMATCHED.push({channel:"틱톡", sub:subTag, campaign, spend});
+      country = "미분류";
     }
     rows.push({channel:"틱톡", country, region:regionOverride, date, spend, impr, clicks});
   });
@@ -255,7 +285,7 @@ function parseMeta(csvText){
     const impr = num(r["노출"]);
     const clicks = num(r["링크 클릭"] || r["클릭(전체)"]);
     if(!date) return;
-    const country = ISO_NAME[countryCode] || countryCode || "미분류";
+    const country = countryCode ? normalizeCountry(countryCode) : "미분류";
     rows.push({channel:"메타", country, date, spend, impr, clicks});
   });
   return rows;
