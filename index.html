@@ -140,7 +140,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson-client/3.1.0/topojson-client.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 <script>
 const SPREADSHEET_ID = "1-gZrBKjTlxhc6VCJWsFDjM6epwaGvGP5q81Dadx8SP8";
 const GIDS = { 틱톡:0, 틱톡아랍:703547167, 틱톡라탐:1724510644, 메타:1252891778, 구글:1157043789 };
@@ -304,12 +304,16 @@ const ENGLISH_NAME = {
 
 function normalizeCountry(raw){
   if(!raw) return raw;
-  const t = String(raw).trim();
+  let t = String(raw).trim();
   if(ISO_NAME[t]) return ISO_NAME[t];
   if(COUNTRY_ALIAS[t]) return COUNTRY_ALIAS[t];
-  const lower = t.toLowerCase();
+  const lower = t.replace(/,/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
   if(ENGLISH_NAME[lower]) return ENGLISH_NAME[lower];
   return t; // 이미 한글 국가명이거나, 매핑 안 된 값은 그대로
+}
+function isUnknownValue(raw){
+  if(!raw) return true;
+  return String(raw).trim().toLowerCase() === "unknown";
 }
 
 function regionFromNames(names){
@@ -376,7 +380,7 @@ function parseTikTok(csvText, subTag){
     if(!date) return;
 
     let country;
-    if(!rawCountry || String(rawCountry).trim().toLowerCase()==="unknown"){
+    if(isUnknownValue(rawCountry)){
       UNMATCHED.push({channel:"틱톡", sub:subTag, campaign:r["캠페인 이름"]||"", spend});
       country = "미분류";
     } else {
@@ -402,7 +406,7 @@ function parseMeta(csvText){
     const impr = num(r["노출"]);
     const clicks = num(r["링크 클릭"] || r["클릭(전체)"]);
     if(!date) return;
-    const country = countryCode ? normalizeCountry(countryCode) : "미분류";
+    const country = isUnknownValue(countryCode) ? "미분류" : normalizeCountry(countryCode);
     rows.push({channel:"메타", country, date, spend, impr, clicks});
   });
   return rows;
