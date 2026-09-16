@@ -155,7 +155,21 @@ const ISO_NAME = {
   DZ:"알제리",TN:"튀니지",MY:"말레이시아",TH:"태국",PH:"필리핀",SG:"싱가포르",IN:"인도",PK:"파키스탄",
   BD:"방글라데시",QA:"카타르",IQ:"이라크",SE:"스웨덴",DK:"덴마크",GE:"조지아",TW:"대만",PR:"푸에르토리코",
   NO:"노르웨이",FI:"핀란드",CH:"스위스",AT:"오스트리아",IE:"아일랜드",HU:"헝가리",BG:"불가리아",
+  KU:"쿠웨이트", UAE:"아랍에미리트", // 시트에서 표준 ISO코드 대신 쓰는 비표준 축약형
 };
+
+// gviz(구글 시각화 API) 응답에서 날짜 타입 셀은 "Date(2026,0,1)" 형식(월은 0부터 시작)으로 내려오는
+// 경우가 있음 — 이걸 일반 "YYYY-MM-DD" 문자열로 정규화.
+function normalizeDate(v){
+  if(!v) return v;
+  const s = String(v);
+  const m = s.match(/^Date\((\d+),\s*(\d+),\s*(\d+)/);
+  if(m){
+    const y = m[1], mo = String(parseInt(m[2],10)+1).padStart(2,"0"), d = String(parseInt(m[3],10)).padStart(2,"0");
+    return `${y}-${mo}-${d}`;
+  }
+  return s;
+}
 
 // 국가명/ISO 코드 -> 표준 국가명, 권역 매핑
 const COUNTRY_REGION = {
@@ -256,7 +270,7 @@ function parseTikTok(csvText, subTag){
   parsed.data.forEach(r => {
     // A~J 컬럼 고정: 계정 이름, 캠페인 이름, 광고 그룹 이름, 광고 이름, 일별, 성별, 나이, 지출, 노출수, 클릭수(목적지)
     const campaign = r["캠페인 이름"] || "";
-    const date = r["일별"];
+    const date = normalizeDate(r["일별"]);
     const spend = num(r["지출"]);
     const impr = num(r["노출수"]);
     const clicks = num(r["클릭수(목적지)"]);
@@ -279,7 +293,7 @@ function parseMeta(csvText){
   const parsed = Papa.parse(csvText, {header:true, skipEmptyLines:true});
   const rows = [];
   parsed.data.forEach(r => {
-    const date = r["일"];
+    const date = normalizeDate(r["일"]);
     const countryCode = r["국가"];
     const spend = num(r["지출 금액 (KRW)"]);
     const impr = num(r["노출"]);
@@ -295,7 +309,7 @@ function parseGoogle(csvText){
   const parsed = Papa.parse(csvText, {header:true, skipEmptyLines:true});
   const rows = [];
   parsed.data.forEach(r => {
-    const date = r["일"];
+    const date = normalizeDate(r["일"]);
     const spend = num(r["비용"]);
     const impr = num(r["노출수"]);
     const clicks = num(r["클릭수"]);
