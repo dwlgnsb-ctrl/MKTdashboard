@@ -198,6 +198,14 @@ function regionOf(country){ return COUNTRY_REGION[country] || "기타"; }
 function regionOfRow(r){ return r.region || regionOf(r.country); }
 
 // 국가 한글명 -> ISO-3166-1 숫자코드 (world-atlas topojson과 매칭용)
+// 국가 티어 (마케팅 우선순위 등급)
+const COUNTRY_TIER = {
+  "미국":1, "일본":1, "브라질":1, "사우디아라비아":1,
+  "베트남":2, "터키":2, "폴란드":2, "독일":2, "프랑스":2, "멕시코":2,
+  "홍콩":3, "캄보디아":3, "조지아":3, "영국":3, "체코":3, "칠레":3, "파라과이":3, "아랍에미리트":3, "호주":3, "이집트":3, "이스라엘":3,
+};
+const TIER_COLOR = {1:"#D85A30", 2:"#0F6E56", 3:"#534AB7"};
+
 const COUNTRY_NUMERIC = {
   "베트남":"704","인도네시아":"360","말레이시아":"458","캄보디아":"116","필리핀":"608","태국":"764","싱가포르":"702",
   "사우디아라비아":"682","아랍에미리트":"784","쿠웨이트":"414","이집트":"818","카타르":"634","이라크":"368","요르단":"400",
@@ -266,6 +274,54 @@ async function renderWorldMap(byCountrySpend, totalSpend){
       .on("click", function(evt, d){
         const name = NUMERIC_TO_COUNTRY[String(d.id)];
         if(name){ selectedRegion = regionOf(name); renderRegions(); }
+      });
+
+    // 티어 국가는 항상 라벨 표시(티어별 크기 차등), 남는 자리는 지출 상위 국가로 보완
+    const MAX_LABELS = 18;
+    const tierEntries = Object.keys(COUNTRY_TIER)
+      .filter(c => (byCountrySpend[c]||0) > 0 && COUNTRY_NUMERIC[c])
+      .sort((a,b) => COUNTRY_TIER[a]-COUNTRY_TIER[b]);
+    const topSpendFill = Object.entries(byCountrySpend)
+      .filter(([c,v]) => v > 0 && COUNTRY_NUMERIC[c] && !COUNTRY_TIER[c])
+      .sort((a,b) => b[1]-a[1])
+      .map(([c]) => c);
+    const labelCountries = [...tierEntries, ...topSpendFill].slice(0, MAX_LABELS);
+    const topSet = new Set(labelCountries);
+    const labelFeatures = countries.filter(d => topSet.has(NUMERIC_TO_COUNTRY[String(d.id)]));
+
+    const FONT_SIZE = { 1:{name:14, amt:11}, 2:{name:11.5, amt:9.5}, 3:{name:10, amt:8.5}, none:{name:9.5, amt:8} };
+    function sizeFor(name){ const t = COUNTRY_TIER[name]; return FONT_SIZE[t] || FONT_SIZE.none; }
+
+    const labelGroup = svg.selectAll("g.map-label")
+      .data(labelFeatures)
+      .join("g")
+      .attr("class","map-label")
+      .attr("transform", d => `translate(${path.centroid(d)})`)
+      .style("pointer-events","none");
+
+    labelGroup.append("text")
+      .attr("text-anchor","middle")
+      .attr("dy","-2px")
+      .style("font-size", d => sizeFor(NUMERIC_TO_COUNTRY[String(d.id)]).name + "px")
+      .style("font-weight","700")
+      .style("paint-order","stroke").style("stroke","#fff").style("stroke-width","3px")
+      .style("fill","#2C2C2A")
+      .text(d => {
+        const name = NUMERIC_TO_COUNTRY[String(d.id)];
+        const tier = COUNTRY_TIER[name];
+        return (tier ? `[T${tier}] ` : "") + name;
+      });
+
+    labelGroup.append("text")
+      .attr("text-anchor","middle")
+      .attr("dy", d => sizeFor(NUMERIC_TO_COUNTRY[String(d.id)]).amt + "px")
+      .style("font-size", d => sizeFor(NUMERIC_TO_COUNTRY[String(d.id)]).amt + "px")
+      .style("paint-order","stroke").style("stroke","#fff").style("stroke-width","3px")
+      .style("fill","#6B6A63")
+      .text(d => {
+        const name = NUMERIC_TO_COUNTRY[String(d.id)];
+        const v = byCountrySpend[name] || 0;
+        return fmt(v) + " · " + (v/totalSpend*100).toFixed(1) + "%";
       });
   }catch(e){
     wrap.innerHTML = `<div style="padding:16px; font-size:12px; color:var(--text-sub); background:#FCEBEB; border-radius:8px;">지도 렌더링 실패: ${e.message}</div>`;
@@ -638,7 +694,9 @@ function renderRegions(){
     box.className = "box";
     const countryRows = Object.entries(data.countries).sort((a,b)=>b[1]-a[1]).map(([c,v]) => {
       const p = totalSpend ? (v/totalSpend*100) : 0;
-      return `<div class="country-row"><span class="name">${c}</span><span class="amt">${fmt(v)} · ${p.toFixed(1)}%</span></div>`;
+      const tier = COUNTRY_TIER[c];
+      const tierBadge = tier ? `<span style="display:inline-block; font-size:9px; font-weight:700; padding:1px 5px; border-radius:8px; margin-right:5px; background:${TIER_COLOR[tier]}1A; color:${TIER_COLOR[tier]};">T${tier}</span>` : "";
+      return `<div class="country-row"><span class="name">${tierBadge}${c}</span><span class="amt">${fmt(v)} · ${p.toFixed(1)}%</span></div>`;
     }).join("");
     box.innerHTML = `<div class="head" style="color:${REGION_COLOR[reg]}"><span class="dot" style="background:${REGION_COLOR[reg]}"></span>${reg}</div><div class="sub">합계 ${fmt(data.spend)}</div>${countryRows}`;
     detailWrap.appendChild(box);
