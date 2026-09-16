@@ -127,13 +127,18 @@
   <!-- COUNTRY SUBPAGE -->
   <div class="page" id="page-country">
     <a class="back-link" id="back-to-main">← 메인으로</a>
-    <h2 style="font-size:16px; margin:12px 0;">국가별 상세</h2>
+    <h2 style="font-size:16px; margin:12px 0;">국가별 상세 분석</h2>
+    <div class="filter-pill-row" id="tier-filter"></div>
     <div class="filter-pill-row" id="country-region-filter"></div>
     <div class="filter-row">
       <label style="font-size:12px; color:var(--text-sub); margin-right:6px;">기준월</label>
       <select id="month-select" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border);"></select>
+      <span style="font-size:11px; color:var(--text-mute); margin-left:8px;">지표를 클릭하면 1~12월 추이 팝업이 뜹니다</span>
     </div>
-    <div class="compare-grid" id="compare-grid"></div>
+    <div style="overflow-x:auto;">
+      <table class="detail" style="min-width:680px;" id="tier-table"></table>
+    </div>
+    <div id="modal-root"></div>
   </div>
 
 </div>
@@ -141,6 +146,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <script>
 const SPREADSHEET_ID = "1-gZrBKjTlxhc6VCJWsFDjM6epwaGvGP5q81Dadx8SP8";
 const GIDS = { 틱톡:0, 틱톡아랍:703547167, 틱톡라탐:1724510644, 메타:1252891778, 구글:1157043789 };
@@ -277,7 +284,7 @@ async function renderWorldMap(byCountrySpend, totalSpend){
       });
 
     // 티어 국가는 항상 라벨 표시(티어별 크기 차등), 남는 자리는 지출 상위 국가로 보완
-    const MAX_LABELS = 18;
+    const MAX_LABELS = 30;
     const tierEntries = Object.keys(COUNTRY_TIER)
       .filter(c => (byCountrySpend[c]||0) > 0 && COUNTRY_NUMERIC[c])
       .sort((a,b) => COUNTRY_TIER[a]-COUNTRY_TIER[b]);
@@ -285,7 +292,8 @@ async function renderWorldMap(byCountrySpend, totalSpend){
       .filter(([c,v]) => v > 0 && COUNTRY_NUMERIC[c] && !COUNTRY_TIER[c])
       .sort((a,b) => b[1]-a[1])
       .map(([c]) => c);
-    const labelCountries = [...tierEntries, ...topSpendFill].slice(0, MAX_LABELS);
+    const fillSlots = Math.max(0, MAX_LABELS - tierEntries.length);
+    const labelCountries = [...tierEntries, ...topSpendFill.slice(0, fillSlots)];
     const topSet = new Set(labelCountries);
     const labelFeatures = countries.filter(d => topSet.has(NUMERIC_TO_COUNTRY[String(d.id)]));
 
@@ -760,8 +768,22 @@ function renderAll(){
   renderCountryPage();
 }
 
-// ===== 국가별 서브페이지 =====
+// ===== 국가별 서브페이지 (티어 테이블 + 추이 팝업) =====
 let countryRegionFilter = "전체";
+let countryTierFilter = "전체";
+Chart.register(ChartDataLabels);
+
+function renderTierFilter(){
+  const wrap = document.getElementById("tier-filter");
+  wrap.innerHTML = "";
+  ["전체","T1","T2","T3"].forEach(t => {
+    const b = document.createElement("button");
+    b.className = "pill" + (countryTierFilter===t ? " active":"");
+    b.textContent = t;
+    b.onclick = () => { countryTierFilter = t; renderCountryPage(); };
+    wrap.appendChild(b);
+  });
+}
 
 function renderCountryRegionFilter(){
   const regions = ["전체", ...Object.keys(REGION_COLOR)];
@@ -780,10 +802,10 @@ function renderMonthSelect(){
   const sel = document.getElementById("month-select");
   const months = monthList();
   const prevVal = sel.value;
-  sel.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join("");
-  if(months.includes(prevVal)) sel.value = prevVal;
-  else if(months.length) sel.value = months[months.length-1];
-  sel.onchange = renderCompare;
+  sel.innerHTML = `<option value="all">전체(기간 합산)</option>` + months.map(m => `<option value="${m}">${m}</option>`).join("");
+  if(prevVal && (prevVal==="all" || months.includes(prevVal))) sel.value = prevVal;
+  else sel.value = "all";
+  sel.onchange = renderTierTable;
 }
 
 function metricsFor(rows){
@@ -798,52 +820,103 @@ function metricsFor(rows){
   };
 }
 
-function renderCompare(){
-  const months = monthList();
+const TIER_STYLE = {
+  1: {bg:"var(--bg-warning)", label:"T1"},
+  2: {bg:"transparent", label:"T2", color:"var(--text-accent)"},
+  3: {bg:"var(--surface-1)", label:"T3"},
+};
+const METRIC_LABEL = {impr:"노출", clicks:"클릭", cpc:"CPC (원)", cpm:"CPM (원)", ctr:"CTR (%)"};
+
+function renderTierTable(){
   const sel = document.getElementById("month-select");
-  const currentMonth = sel.value;
-  const idx = months.indexOf(currentMonth);
-  const prevMonth = idx>0 ? months[idx-1] : null;
+  const monthVal = sel.value;
+  let rows = monthVal === "all" ? ALL_ROWS : ALL_ROWS.filter(r => getMonthKey(r.date)===monthVal);
+  if(countryRegionFilter !== "전체") rows = rows.filter(r => regionOfRow(r)===countryRegionFilter);
 
-  const grid = document.getElementById("compare-grid");
-  grid.innerHTML = "";
+  const byCountry = {};
+  rows.forEach(r => {
+    byCountry[r.country] = byCountry[r.country] || [];
+    byCountry[r.country].push(r);
+  });
 
-  [prevMonth, currentMonth].forEach((m, i) => {
-    const box = document.createElement("div");
-    box.className = "compare-box";
-    if(!m){
-      box.innerHTML = `<div class="month-label">이전 달 없음</div>`;
-      grid.appendChild(box);
-      return;
+  let entries = Object.entries(byCountry).map(([country, crows]) => ({
+    country, region: regionOfRow(crows[0]), tier: COUNTRY_TIER[country]||null, m: metricsFor(crows)
+  }));
+  if(countryTierFilter !== "전체"){
+    const t = parseInt(countryTierFilter.replace("T",""),10);
+    entries = entries.filter(e => e.tier===t);
+  }
+  entries.sort((a,b) => (a.tier||9)-(b.tier||9) || b.m.spend-a.m.spend);
+
+  const table = document.getElementById("tier-table");
+  table.innerHTML = `<tr><th>티어</th><th style="text-align:left;">권역</th><th style="text-align:left;">국가</th><th>노출</th><th>클릭</th><th>CPC</th><th>CPM</th><th>CTR</th></tr>`;
+  entries.forEach(e => {
+    const st = e.tier ? TIER_STYLE[e.tier] : {bg:"transparent", label:"–"};
+    const tr = document.createElement("tr");
+    tr.style.background = st.bg;
+    const cell = (metric, val, disp) => {
+      const td = document.createElement("td");
+      td.textContent = disp;
+      td.style.color = "var(--text-accent)"; td.style.cursor = "pointer"; td.style.textDecoration = "underline";
+      td.onclick = () => openMetricModal(e.country, metric);
+      return td;
+    };
+    tr.innerHTML = `<td style="font-weight:500; color:${st.color||'var(--text-primary)'};">${st.label}</td><td style="text-align:left; color:var(--text-secondary);">${e.region}</td><td style="text-align:left;">${e.country}</td>`;
+    tr.appendChild(cell("impr", e.m.impr, fmt(e.m.impr)));
+    tr.appendChild(cell("clicks", e.m.clicks, fmt(e.m.clicks)));
+    tr.appendChild(cell("cpc", e.m.cpc, fmt(e.m.cpc)));
+    tr.appendChild(cell("cpm", e.m.cpm, fmt(e.m.cpm)));
+    tr.appendChild(cell("ctr", e.m.ctr, pct(e.m.ctr)));
+    table.appendChild(tr);
+  });
+}
+
+let modalChart = null;
+function openMetricModal(country, metric){
+  const data = [];
+  for(let m=1; m<=12; m++){
+    const key = `2026-${String(m).padStart(2,"0")}`;
+    const rows = ALL_ROWS.filter(r => r.country===country && getMonthKey(r.date)===key);
+    if(rows.length===0){ data.push(null); continue; }
+    const mm = metricsFor(rows);
+    data.push(mm[metric]);
+  }
+  const labels = data.map((_,i)=>`${i+1}월`);
+  const metricLabel = METRIC_LABEL[metric];
+
+  const root = document.getElementById("modal-root");
+  root.innerHTML = `<div style="min-height:420px; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; border-radius:12px; position:fixed; inset:0; z-index:50;">
+    <div style="background:var(--card); border-radius:12px; padding:1.25rem; width:min(92%,600px);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <p style="font-weight:600; font-size:14px; margin:0;">${country} · ${metricLabel} 추이 (1~12월)</p>
+        <button id="modal-close" aria-label="닫기" style="border:1px solid var(--border); background:var(--card); border-radius:8px; padding:4px 8px; cursor:pointer;">✕</button>
+      </div>
+      <div style="position:relative; height:240px;"><canvas id="modal-chart" role="img" aria-label="${country} ${metricLabel} 1월부터 12월까지 월별 추이"></canvas></div>
+    </div>
+  </div>`;
+  document.getElementById("modal-close").onclick = () => { root.innerHTML = ""; };
+
+  if(modalChart) modalChart.destroy();
+  modalChart = new Chart(document.getElementById("modal-chart"), {
+    type: "line",
+    data: { labels, datasets: [{ label: metricLabel, data, borderColor:"#2a78d6", backgroundColor:"rgba(42,120,214,0.1)", fill:true, tension:0.3, pointRadius:4, pointBackgroundColor:"#2a78d6", spanGaps:false }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top:24 } },
+      plugins:{
+        legend:{display:false},
+        datalabels:{ align:"top", anchor:"end", font:{size:10}, color:"#52514e",
+          formatter:(v)=> v===null || v===undefined ? "" : (metric==="ctr" ? v.toFixed(2)+"%" : fmt(v)) }
+      }
     }
-    let rows = ALL_ROWS.filter(r => getMonthKey(r.date)===m);
-    if(countryRegionFilter !== "전체"){
-      rows = rows.filter(r => regionOfRow(r)===countryRegionFilter);
-    }
-    const byCountry = {};
-    rows.forEach(r => {
-      byCountry[r.country] = byCountry[r.country] || [];
-      byCountry[r.country].push(r);
-    });
-    const tableRows = Object.entries(byCountry)
-      .map(([c, crows]) => ({country:c, m:metricsFor(crows)}))
-      .sort((a,b)=>b.m.spend-a.m.spend)
-      .map(({country,m}) => `<tr><td>${country}</td><td>${fmt(m.spend)}</td><td>${fmt(m.impr)}</td><td>${fmt(m.clicks)}</td><td>${fmt(m.cpc)}</td><td>${pct(m.ctr)}</td><td>${fmt(m.cpm)}</td></tr>`)
-      .join("");
-    box.innerHTML = `
-      <div class="month-label">${m} ${i===1?"(당월)":"(전월)"}</div>
-      <table class="detail">
-        <tr><th>국가</th><th>지출</th><th>노출</th><th>클릭</th><th>CPC</th><th>CTR</th><th>CPM</th></tr>
-        ${tableRows}
-      </table>`;
-    grid.appendChild(box);
   });
 }
 
 function renderCountryPage(){
+  renderTierFilter();
   renderCountryRegionFilter();
   renderMonthSelect();
-  renderCompare();
+  renderTierTable();
 }
 
 // ===== 페이지 전환 =====
