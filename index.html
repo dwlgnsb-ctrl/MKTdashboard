@@ -289,38 +289,84 @@ async function renderWorldMap(byCountrySpend, totalSpend){
     const topSet = new Set(labelCountries);
     const labelFeatures = countries.filter(d => topSet.has(NUMERIC_TO_COUNTRY[String(d.id)]));
 
+    // 지출 상위/티어 국가 라벨 좌표 계산
+    const labelPoints = labelFeatures.map(d => {
+      const name = NUMERIC_TO_COUNTRY[String(d.id)];
+      const [x,y] = path.centroid(d);
+      return { name, x, y };
+    }).filter(p => isFinite(p.x) && isFinite(p.y));
+
+    // 가까운 점끼리 클러스터로 묶기
+    function clusterPoints(pts, threshold){
+      const used = new Array(pts.length).fill(false);
+      const clusters = [];
+      for(let i=0;i<pts.length;i++){
+        if(used[i]) continue;
+        const cluster = [pts[i]]; used[i]=true;
+        for(let j=i+1;j<pts.length;j++){
+          if(used[j]) continue;
+          const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y;
+          if(Math.sqrt(dx*dx+dy*dy) < threshold){ cluster.push(pts[j]); used[j]=true; }
+        }
+        clusters.push(cluster);
+      }
+      return clusters;
+    }
+    const clusters = clusterPoints(labelPoints, 44);
+
+    // 클러스터가 2개 이상이면 겹치니까 위쪽으로 세로로 펼쳐서 인출선으로 연결
+    const placed = [];
+    clusters.forEach(cluster => {
+      if(cluster.length === 1){
+        placed.push({...cluster[0], lx:cluster[0].x, ly:cluster[0].y, leader:false});
+        return;
+      }
+      const cx = d3.mean(cluster, p=>p.x), topY = d3.min(cluster, p=>p.y);
+      const anchorY = topY - 34;
+      cluster
+        .sort((a,b) => (COUNTRY_TIER[a.name]||9) - (COUNTRY_TIER[b.name]||9))
+        .forEach((p, i) => {
+          const ly = anchorY - i*24;
+          placed.push({...p, lx:cx, ly, leader:true});
+        });
+    });
+
     const FONT_SIZE = { 1:{name:14, amt:11}, 2:{name:11.5, amt:9.5}, 3:{name:10, amt:8.5}, none:{name:9.5, amt:8} };
     function sizeFor(name){ const t = COUNTRY_TIER[name]; return FONT_SIZE[t] || FONT_SIZE.none; }
 
+    // 인출선
+    svg.selectAll("line.leader")
+      .data(placed.filter(p=>p.leader))
+      .join("line")
+      .attr("class","leader")
+      .attr("x1", p=>p.x).attr("y1", p=>p.y)
+      .attr("x2", p=>p.lx).attr("y2", p=>p.ly)
+      .attr("stroke", "#999").attr("stroke-width", 0.8);
+
     const labelGroup = svg.selectAll("g.map-label")
-      .data(labelFeatures)
+      .data(placed)
       .join("g")
       .attr("class","map-label")
-      .attr("transform", d => `translate(${path.centroid(d)})`)
+      .attr("transform", p => `translate(${p.lx},${p.ly})`)
       .style("pointer-events","none");
 
     labelGroup.append("text")
       .attr("text-anchor","middle")
       .attr("dy","-2px")
-      .style("font-size", d => sizeFor(NUMERIC_TO_COUNTRY[String(d.id)]).name + "px")
+      .style("font-size", p => sizeFor(p.name).name + "px")
       .style("font-weight","700")
       .style("paint-order","stroke").style("stroke","#fff").style("stroke-width","3px")
       .style("fill","#2C2C2A")
-      .text(d => {
-        const name = NUMERIC_TO_COUNTRY[String(d.id)];
-        const tier = COUNTRY_TIER[name];
-        return (tier ? `[T${tier}] ` : "") + name;
-      });
+      .text(p => (COUNTRY_TIER[p.name] ? `[T${COUNTRY_TIER[p.name]}] ` : "") + p.name);
 
     labelGroup.append("text")
       .attr("text-anchor","middle")
-      .attr("dy", d => sizeFor(NUMERIC_TO_COUNTRY[String(d.id)]).amt + "px")
-      .style("font-size", d => sizeFor(NUMERIC_TO_COUNTRY[String(d.id)]).amt + "px")
+      .attr("dy", p => sizeFor(p.name).amt + "px")
+      .style("font-size", p => sizeFor(p.name).amt + "px")
       .style("paint-order","stroke").style("stroke","#fff").style("stroke-width","3px")
       .style("fill","#6B6A63")
-      .text(d => {
-        const name = NUMERIC_TO_COUNTRY[String(d.id)];
-        const v = byCountrySpend[name] || 0;
+      .text(p => {
+        const v = byCountrySpend[p.name] || 0;
         return fmt(v) + " · " + (v/totalSpend*100).toFixed(1) + "%";
       });
   }catch(e){
