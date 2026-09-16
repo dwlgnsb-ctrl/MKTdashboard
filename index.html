@@ -222,49 +222,54 @@ async function ensureWorldTopo(){
 
 async function renderWorldMap(byCountrySpend, totalSpend){
   const wrap = document.getElementById("world-map-wrap");
-  let topo;
-  try{ topo = await ensureWorldTopo(); }catch(e){ wrap.innerHTML = ""; return; }
+  try{
+    if(typeof d3 === "undefined") throw new Error("d3 라이브러리 로드 실패");
+    if(typeof topojson === "undefined") throw new Error("topojson-client 라이브러리 로드 실패");
+    const topo = await ensureWorldTopo();
 
-  const width = wrap.clientWidth || 900, height = Math.round(width*0.5);
-  wrap.innerHTML = "";
-  const svg = d3.select(wrap).append("svg").attr("viewBox", `0 0 ${width} ${height}`).style("width","100%").style("height","auto");
-  const projection = d3.geoNaturalEarth1().fitSize([width, height], topojson.feature(topo, topo.objects.countries));
-  const path = d3.geoPath(projection);
-  const countries = topojson.feature(topo, topo.objects.countries).features;
+    const width = wrap.clientWidth || 900, height = Math.round(width*0.5);
+    wrap.innerHTML = "";
+    const svg = d3.select(wrap).append("svg").attr("viewBox", `0 0 ${width} ${height}`).style("width","100%").style("height","auto");
+    const projection = d3.geoNaturalEarth1().fitSize([width, height], topojson.feature(topo, topo.objects.countries));
+    const path = d3.geoPath(projection);
+    const countries = topojson.feature(topo, topo.objects.countries).features;
 
-  const tooltip = d3.select(wrap).append("div")
-    .style("position","absolute").style("pointer-events","none").style("background","#2C2C2A").style("color","#fff")
-    .style("padding","4px 8px").style("border-radius","6px").style("font-size","11px").style("opacity",0).style("z-index",10);
-  wrap.style.position = "relative";
+    const tooltip = d3.select(wrap).append("div")
+      .style("position","absolute").style("pointer-events","none").style("background","#2C2C2A").style("color","#fff")
+      .style("padding","4px 8px").style("border-radius","6px").style("font-size","11px").style("opacity",0).style("z-index",10);
+    wrap.style.position = "relative";
 
-  svg.selectAll("path")
-    .data(countries)
-    .join("path")
-    .attr("d", path)
-    .attr("fill", d => {
-      const name = NUMERIC_TO_COUNTRY[String(d.id)];
-      if(!name) return "#EDEAE1";
-      const reg = regionOf(name);
-      return REGION_COLOR[reg] ? (REGION_BG[reg] || "#EDEAE1") : "#EDEAE1";
-    })
-    .attr("stroke", "#fff").attr("stroke-width", 0.5)
-    .style("cursor","pointer")
-    .on("mousemove", function(evt, d){
-      const name = NUMERIC_TO_COUNTRY[String(d.id)];
-      const spend = name ? (byCountrySpend[name]||0) : 0;
-      if(!name || !spend){ tooltip.style("opacity",0); return; }
-      const p = spend/totalSpend*100;
-      const rect = wrap.getBoundingClientRect();
-      tooltip.style("opacity",1)
-        .html(`<b>${name}</b><br>${fmt(spend)} · ${p.toFixed(1)}%`)
-        .style("left", (evt.clientX-rect.left+10)+"px")
-        .style("top", (evt.clientY-rect.top+10)+"px");
-    })
-    .on("mouseleave", ()=>tooltip.style("opacity",0))
-    .on("click", function(evt, d){
-      const name = NUMERIC_TO_COUNTRY[String(d.id)];
-      if(name){ selectedRegion = regionOf(name); renderRegions(); }
-    });
+    svg.selectAll("path")
+      .data(countries)
+      .join("path")
+      .attr("d", path)
+      .attr("fill", d => {
+        const name = NUMERIC_TO_COUNTRY[String(d.id)];
+        if(!name) return "#EDEAE1";
+        const reg = regionOf(name);
+        return REGION_BG[reg] || "#EDEAE1";
+      })
+      .attr("stroke", "#fff").attr("stroke-width", 0.5)
+      .style("cursor","pointer")
+      .on("mousemove", function(evt, d){
+        const name = NUMERIC_TO_COUNTRY[String(d.id)];
+        const spend = name ? (byCountrySpend[name]||0) : 0;
+        if(!name || !spend){ tooltip.style("opacity",0); return; }
+        const p = spend/totalSpend*100;
+        const rect = wrap.getBoundingClientRect();
+        tooltip.style("opacity",1)
+          .html(`<b>${name}</b><br>${fmt(spend)} · ${p.toFixed(1)}%`)
+          .style("left", (evt.clientX-rect.left+10)+"px")
+          .style("top", (evt.clientY-rect.top+10)+"px");
+      })
+      .on("mouseleave", ()=>tooltip.style("opacity",0))
+      .on("click", function(evt, d){
+        const name = NUMERIC_TO_COUNTRY[String(d.id)];
+        if(name){ selectedRegion = regionOf(name); renderRegions(); }
+      });
+  }catch(e){
+    wrap.innerHTML = `<div style="padding:16px; font-size:12px; color:var(--text-sub); background:#FCEBEB; border-radius:8px;">지도 렌더링 실패: ${e.message}</div>`;
+  }
 }
 
 const REGION_COLOR = { 동남아:"#0F6E56", 중동:"#534AB7", 유럽:"#993C1D", 남미:"#993556", 북미:"#854F0B", 아시아:"#185FA5", 기타:"#5F5E5A" };
@@ -293,7 +298,7 @@ const ENGLISH_NAME = {
   "chile":"칠레","argentina":"아르헨티나","peru":"페루","colombia":"콜롬비아","costa rica":"코스타리카","mexico":"멕시코","paraguay":"파라과이",
   "puerto rico":"푸에르토리코","brazil":"브라질",
   "united states":"미국","usa":"미국","canada":"캐나다",
-  "japan":"일본","india":"인도","pakistan":"파키스탄","bangladesh":"방글라데시","taiwan":"대만","hong kong":"홍콩",
+  "japan":"일본","india":"인도","pakistan":"파키스탄","bangladesh":"방글라데시","taiwan":"대만","taiwan province of china":"대만","hong kong":"홍콩",
   "nigeria":"나이지리아","south africa":"남아공","australia":"호주","kyrgyzstan":"키르기스스탄",
 };
 
@@ -371,13 +376,14 @@ function parseTikTok(csvText, subTag){
     if(!date) return;
 
     let country;
-    if(!rawCountry){
+    if(!rawCountry || String(rawCountry).trim().toLowerCase()==="unknown"){
       UNMATCHED.push({channel:"틱톡", sub:subTag, campaign:r["캠페인 이름"]||"", spend});
       country = "미분류";
     } else {
       country = normalizeCountry(rawCountry);
-      if(!COUNTRY_REGION[country] && !UNKNOWN_SEEN.has(country)){
-        UNKNOWN_SEEN.add(country);
+      const dedupKey = country.toLowerCase();
+      if(!COUNTRY_REGION[country] && !UNKNOWN_SEEN.has(dedupKey)){
+        UNKNOWN_SEEN.add(dedupKey);
         UNMAPPED_COUNTRIES.push({channel:"틱톡", sub:subTag, raw:rawCountry, resolved:country});
       }
     }
