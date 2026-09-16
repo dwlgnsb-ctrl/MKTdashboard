@@ -138,6 +138,7 @@
   <div class="page" id="page-country">
     <a class="back-link" id="back-to-main">← 메인으로</a>
     <h2 style="font-size:16px; margin:12px 0;">국가별 상세 분석</h2>
+    <div class="filter-pill-row" id="channel-filter"></div>
     <div class="filter-pill-row" id="tier-filter"></div>
     <div class="filter-pill-row" id="country-region-filter"></div>
     <div class="filter-row">
@@ -804,6 +805,19 @@ function renderAll(){
 // ===== 국가별 서브페이지 (티어 테이블 + 추이 팝업) =====
 let countryRegionFilter = "전체";
 let countryTierFilter = "전체";
+let countryChannelFilter = "전체";
+
+function renderChannelFilter(){
+  const wrap = document.getElementById("channel-filter");
+  wrap.innerHTML = "";
+  ["전체","틱톡","메타","구글"].forEach(ch => {
+    const b = document.createElement("button");
+    b.className = "pill" + (countryChannelFilter===ch ? " active":"");
+    b.textContent = ch;
+    b.onclick = () => { countryChannelFilter = ch; renderCountryPage(); };
+    wrap.appendChild(b);
+  });
+}
 Chart.register(ChartDataLabels);
 
 function renderTierFilter(){
@@ -865,6 +879,7 @@ function renderTierTable(){
   const monthVal = sel.value;
   let rows = monthVal === "all" ? ALL_ROWS : ALL_ROWS.filter(r => getMonthKey(r.date)===monthVal);
   if(countryRegionFilter !== "전체") rows = rows.filter(r => regionOfRow(r)===countryRegionFilter);
+  if(countryChannelFilter !== "전체") rows = rows.filter(r => r.channel===countryChannelFilter);
 
   const byCountry = {};
   rows.forEach(r => {
@@ -908,7 +923,8 @@ function openMetricModal(country, metric){
   const data = [];
   for(let m=1; m<=12; m++){
     const key = `2026-${String(m).padStart(2,"0")}`;
-    const rows = ALL_ROWS.filter(r => r.country===country && getMonthKey(r.date)===key);
+    let rows = ALL_ROWS.filter(r => r.country===country && getMonthKey(r.date)===key);
+    if(countryChannelFilter !== "전체") rows = rows.filter(r => r.channel===countryChannelFilter);
     if(rows.length===0){ data.push(null); continue; }
     const mm = metricsFor(rows);
     data.push(mm[metric]);
@@ -920,7 +936,7 @@ function openMetricModal(country, metric){
   root.innerHTML = `<div style="min-height:420px; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; border-radius:12px; position:fixed; inset:0; z-index:50;">
     <div style="background:var(--card); border-radius:12px; padding:1.25rem; width:min(92%,600px);">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <p style="font-weight:600; font-size:14px; margin:0;">${country} · ${metricLabel} 추이 (1~12월)</p>
+        <p style="font-weight:600; font-size:14px; margin:0;">${country} · ${countryChannelFilter} · ${metricLabel} 추이 (1~12월)</p>
         <button id="modal-close" aria-label="닫기" style="border:1px solid var(--border); background:var(--card); border-radius:8px; padding:4px 8px; cursor:pointer;">✕</button>
       </div>
       <div style="position:relative; height:240px;"><canvas id="modal-chart" role="img" aria-label="${country} ${metricLabel} 1월부터 12월까지 월별 추이"></canvas></div>
@@ -945,6 +961,7 @@ function openMetricModal(country, metric){
 }
 
 function renderCountryPage(){
+  renderChannelFilter();
   renderTierFilter();
   renderCountryRegionFilter();
   renderMonthSelect();
