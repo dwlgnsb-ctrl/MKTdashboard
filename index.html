@@ -312,9 +312,9 @@ async function renderWorldMap(byCountrySpend, totalSpend){
       }
       return clusters;
     }
-    const clusters = clusterPoints(labelPoints, 44);
+    const clusters = clusterPoints(labelPoints, 30);
 
-    // 클러스터가 2개 이상이면 겹치니까 위쪽으로 세로로 펼쳐서 인출선으로 연결
+    // 클러스터가 2개 이상이면 겹치니까 위쪽으로 펼쳐서 인출선으로 연결 (4개 이상이면 2열로)
     const placed = [];
     clusters.forEach(cluster => {
       if(cluster.length === 1){
@@ -322,13 +322,16 @@ async function renderWorldMap(byCountrySpend, totalSpend){
         return;
       }
       const cx = d3.mean(cluster, p=>p.x), topY = d3.min(cluster, p=>p.y);
-      const anchorY = topY - 34;
-      cluster
-        .sort((a,b) => (COUNTRY_TIER[a.name]||9) - (COUNTRY_TIER[b.name]||9))
-        .forEach((p, i) => {
-          const ly = anchorY - i*24;
-          placed.push({...p, lx:cx, ly, leader:true});
-        });
+      const anchorY = topY - 46;
+      const sorted = [...cluster].sort((a,b) => (COUNTRY_TIER[a.name]||9) - (COUNTRY_TIER[b.name]||9));
+      const twoCol = sorted.length >= 4;
+      sorted.forEach((p, i) => {
+        const col = twoCol ? (i % 2) : 0;
+        const row = twoCol ? Math.floor(i/2) : i;
+        const lx = twoCol ? cx + (col===0 ? -58 : 58) : cx;
+        const ly = anchorY - row*32;
+        placed.push({...p, lx, ly, leader:true});
+      });
     });
 
     const FONT_SIZE = { 1:{name:14, amt:11}, 2:{name:11.5, amt:9.5}, 3:{name:10, amt:8.5}, none:{name:9.5, amt:8} };
