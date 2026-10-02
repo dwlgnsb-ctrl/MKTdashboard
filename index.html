@@ -7,22 +7,23 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   :root{
-    --bg:#FBF4F3; --card:#FFFFFF; --card2:#F6DEDB;
-    --border:#F0DAD6; --text:#3A2321; --muted:#A47D78;
-    --accent:#C9664F; --accent-dark:#8C3A2D;
-    --green-bg:#E3EEDC; --green-text:#2F5A1E;
-    --amber-bg:#FBE9D2; --amber-text:#8A5A12;
-    --red-bg:#F8D9D3; --red-text:#8C2A1C;
+    --bg:#FAFAFC; --card:#FFFFFF; --card2:#FBFBFD;
+    --border:#EFEFF4; --text:#262730; --muted:#9A9AA8;
+    --accent:#FF7FA0; --accent-dark:#D6436A; --accent-soft:#FFE8EE;
+    --green-bg:#E3F7E9; --green-text:#2FA360;
+    --amber-bg:#FFF3DC; --amber-text:#D98A1D;
+    --red-bg:#FFE3E6; --red-text:#E0575A;
+    --shadow:0 1px 3px rgba(20,20,40,0.06);
   }
   *{box-sizing:border-box;}
   body{font-family:"Malgun Gothic","맑은 고딕",sans-serif;background:var(--bg);color:var(--text);margin:0;padding:24px;}
   .wrap{max-width:1180px;margin:0 auto;}
   h1{font-size:20px;font-weight:700;margin:0 0 16px;color:var(--text);}
   .topbar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
-  select{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:13px;color:var(--text);}
+  select{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card);font-size:13px;color:var(--text);box-shadow:var(--shadow);}
   .muted{color:var(--muted);font-size:12px;}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:20px;}
-  .card2{background:var(--card2);border-radius:8px;padding:14px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:20px;box-shadow:var(--shadow);}
+  .card2{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:var(--shadow);}
   .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
   .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
   .label{font-size:12px;color:var(--muted);margin-bottom:4px;}
@@ -356,8 +357,8 @@ function render(){
   document.getElementById("topSummary").innerHTML = `
     <div class="card2"><div class="label">총 예산</div><div class="num">${fmt(totalBudget)}</div></div>
     <div class="card2"><div class="label">사용 예산</div><div class="num">${fmt(totalUsed)}</div></div>
-    <div class="card2"><div class="label">소진율</div><div class="num" style="color:var(--accent-dark)">${overallPct}%</div></div>
-    <div class="card2" style="background:${projChip.bg}"><div class="label" style="color:${projChip.text}">예상 월말 소진율</div><div class="num" style="color:${projChip.text}">${projected}%</div></div>
+    <div class="card2" style="background:var(--accent-soft);border-color:var(--accent-soft)"><div class="label" style="color:var(--accent-dark)">소진율</div><div class="num" style="color:var(--accent-dark)">${overallPct}%</div></div>
+    <div class="card2" style="background:${projChip.bg};border-color:${projChip.bg}"><div class="label" style="color:${projChip.text}">예상 월말 소진율</div><div class="num" style="color:${projChip.text}">${projected}%</div></div>
   `;
 
   // 채널별 총예산 카드
