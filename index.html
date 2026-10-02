@@ -3,983 +3,489 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mary&May 광고비 대시보드</title>
+<title>Mary&May 마케팅 예산 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   :root{
-    --bg:#F7F5F0; --card:#FFFFFF; --border:#E7E3D9; --text:#2C2C2A; --text-sub:#6B6A63; --text-mute:#9B9A93;
-    --accent:#D85A30; --accent-bg:#FAECE7;
-    --tiktok:#0F6E56; --meta:#534AB7; --google:#993C1D;
-    --radius:12px;
+    --bg:#F7F6F2; --card:#FFFFFF; --card2:#F1EFE8;
+    --border:#E4E1D8; --text:#222; --muted:#8A8880;
+    --green:#3B6D11; --amber:#854F0B; --red:#791F1F;
+    --greenbar:#639922; --amberbar:#BA7517; --redbar:#E24B4A;
+    --accent:#185FA5;
   }
   *{box-sizing:border-box;}
-  body{
-    margin:0; font-family:-apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-    background:var(--bg); color:var(--text); font-size:14px; line-height:1.5;
-  }
-  .wrap{max-width:1200px; margin:0 auto; padding:20px;}
-  .topbar{
-    display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px;
-  }
-  .topbar h1{font-size:18px; font-weight:700; margin:0;}
-  .topbar .sub{color:var(--text-sub); font-size:12px;}
-  button.tab-btn{
-    border:1px solid var(--border); background:var(--card); color:var(--text-sub);
-    padding:6px 14px; border-radius:20px; font-size:13px; cursor:pointer; font-weight:600;
-  }
-  button.tab-btn.active{background:var(--accent); border-color:var(--accent); color:#fff;}
-  .refresh-btn{
-    border:1px solid var(--border); background:var(--card); padding:8px 14px; border-radius:8px;
-    font-size:13px; cursor:pointer; color:var(--text);
-  }
-  .refresh-btn:hover{background:var(--accent-bg); border-color:var(--accent);}
-  .filter-row{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; align-items:center;}
-  .month-btn{
-    border:1px solid var(--border); background:var(--card); color:var(--text-sub);
-    padding:5px 12px; border-radius:8px; font-size:12px; cursor:pointer; font-weight:600;
-  }
-  .month-btn.active{background:var(--accent); border-color:var(--accent); color:#fff;}
-  .kpi-grid{
-    display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:10px; margin-bottom:20px;
-  }
-  .kpi-card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px;}
-  .kpi-card .label{font-size:12px; color:var(--text-sub); margin-bottom:4px;}
-  .kpi-card .value{font-size:20px; font-weight:700; margin-bottom:6px;}
-  .kpi-card .breakdown{font-size:11px; color:var(--text-sub); margin:1px 0;}
-  .kpi-card .breakdown .tag{color:var(--text-mute); margin-right:3px;}
-  .box-row{display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:24px;}
-  @media (max-width:700px){ .box-row{grid-template-columns:repeat(2,1fr);} }
-  .box{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px;}
-  .box .head{font-size:13px; font-weight:700; margin-bottom:2px; display:flex; align-items:center; gap:6px;}
-  .box .dot{width:8px; height:8px; border-radius:2px; display:inline-block;}
-  .box .sub{font-size:11px; color:var(--text-sub); margin-bottom:8px;}
-  .box table{width:100%; font-size:12px; border-collapse:collapse;}
-  .box table td{padding:3px 2px;}
-  .box table td:last-child{text-align:right;}
-  .box table td.label{color:var(--text-sub);}
-  .box table td.dim{color:var(--text-mute);}
-  .box.total{background:#FAF8F2; border-color:#DED8C8;}
-  section.card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:20px;}
-  section.card > .title{font-size:13px; color:var(--text-sub); margin-bottom:12px; font-weight:600;}
-  .region-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:10px;}
-  .region-badge{
-    border-radius:var(--radius); padding:12px; cursor:pointer; border:2px solid transparent; transition:transform .1s;
-  }
-  .region-badge:hover{transform:translateY(-1px);}
-  .region-badge.selected{border-color:var(--text);}
-  .region-badge .name{font-weight:700; font-size:13px; margin-bottom:2px;}
-  .region-badge .amt{font-size:12px; opacity:.85;}
-  .region-detail-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:10px; margin-top:14px;}
-  .country-row{display:flex; justify-content:space-between; font-size:12px; padding:4px 2px; border-bottom:1px solid var(--border);}
-  .country-row:last-child{border-bottom:none;}
-  .country-row .name{color:var(--text);}
-  .country-row .amt{color:var(--text-sub); text-align:right;}
-  .warn-box{background:#FFF7E8; border:1px solid #F0D89A; border-radius:8px; padding:10px 14px; font-size:12px; color:#7A5B10; margin-bottom:16px;}
-  .filter-pill-row{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;}
-  .pill{border:1px solid var(--border); background:var(--card); padding:5px 12px; border-radius:20px; font-size:12px; cursor:pointer; color:var(--text-sub); font-weight:600;}
-  .pill.active{background:var(--accent); border-color:var(--accent); color:#fff;}
-  .tier-card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-top:12px;}
-  #tier-table{width:100%; border-collapse:collapse; font-size:13px;}
-  #tier-table th{text-align:right; padding:8px 6px; font-size:11px; color:var(--text-sub); font-weight:600; background:#FAF8F2; border-bottom:1px solid var(--border);}
-  #tier-table th:nth-child(1),#tier-table th:nth-child(2),#tier-table th:nth-child(3){text-align:left;}
-  #tier-table td{padding:7px 6px; border-bottom:1px solid var(--border);}
-  #tier-table tr:hover td{background:var(--accent-bg);}
-  .tier-pill{display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:12px;}
-  .tier-pill.t1{background:#FAEEDA; color:#854F0B;}
-  .tier-pill.t2{background:#E1F5EE; color:#0F6E56;}
-  .tier-pill.t3{background:#EEEDFE; color:#534AB7;}
-  .compare-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
-  @media (max-width:700px){ .compare-grid{grid-template-columns:1fr;} }
-  .compare-box{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px;}
-  .compare-box .month-label{font-size:13px; font-weight:700; margin-bottom:8px;}
-  table.detail{width:100%; font-size:11px; border-collapse:collapse;}
-  table.detail th{text-align:right; color:var(--text-sub); font-weight:600; padding:3px 2px; border-bottom:1px solid var(--border);}
-  table.detail th:first-child{text-align:left;}
-  table.detail td{padding:3px 2px; text-align:right;}
-  table.detail td:first-child{text-align:left;}
-  .loading{padding:40px; text-align:center; color:var(--text-sub);}
-  a.back-link{font-size:13px; color:var(--accent); cursor:pointer; text-decoration:none; font-weight:600;}
-  .page{display:none;}
-  .page.active{display:block;}
+  body{font-family:"Malgun Gothic","맑은 고딕",sans-serif;background:var(--bg);color:var(--text);margin:0;padding:24px;}
+  .wrap{max-width:1180px;margin:0 auto;}
+  h1{font-size:20px;font-weight:700;margin:0 0 16px;}
+  .topbar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+  select{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:13px;}
+  .muted{color:var(--muted);font-size:12px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:20px;}
+  .card2{background:var(--card2);border-radius:8px;padding:14px;}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .label{font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .num{font-size:22px;font-weight:700;}
+  .section-title{font-size:14px;font-weight:700;margin:24px 0 8px;}
+  .section-title:first-child{margin-top:0;}
+  table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
+  td{padding:5px 0;vertical-align:top;}
+  thead td{color:var(--muted);font-size:12px;padding-bottom:6px;}
+  .tier-row td{padding-top:10px;padding-bottom:4px;color:var(--text);font-weight:700;border-top:1px solid var(--border);}
+  tr.datarow td{border-top:none;}
+  .bar-track{height:5px;background:var(--card2);border-radius:4px;margin-top:3px;}
+  .bar-fill{height:5px;border-radius:4px;}
+  .amt{font-size:12px;}
+  .na{font-size:12px;color:var(--muted);}
+  .pct-r{text-align:right;font-weight:700;}
+  .country-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0 20px;font-size:12px;}
+  .country-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);}
+  .alert{border-radius:8px;padding:10px 12px;font-size:12px;}
+  .alert-danger{background:#FCEBEB;color:#791F1F;}
+  .alert-warning{background:#FAEEDA;color:#854F0B;}
+  .alert-muted{background:var(--card2);color:var(--muted);}
+  .card-title{font-size:13px;font-weight:700;margin-bottom:6px;}
+  #error-banner{display:none;background:#FCEBEB;color:#791F1F;border:1px solid #F0997B;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;}
+  .footnote{font-size:11px;color:var(--muted);margin-top:8px;}
 </style>
 </head>
 <body>
 <div class="wrap">
+  <h1>Mary&May 마케팅 예산 대시보드</h1>
+  <div id="error-banner"></div>
+
   <div class="topbar">
-    <div>
-      <h1>Mary&May 광고비 대시보드</h1>
-      <div class="sub" id="last-updated">데이터 불러오는 중…</div>
-    </div>
-    <button class="refresh-btn" id="refresh-btn">↻ 새로고침</button>
+    <select id="monthSelect"></select>
+    <span class="muted" id="dayProgress"></span>
   </div>
 
-  <div id="warn-area"></div>
-
-  <!-- MAIN PAGE -->
-  <div class="page active" id="page-main">
-    <div class="filter-row">
-      <div id="month-filter"></div>
-    </div>
-
-    <div class="kpi-grid" id="kpi-grid"></div>
-
-    <div class="box-row" id="box-row"></div>
-
-    <section class="card">
-      <div class="title">권역별 예산 비중</div>
-      <div id="world-map-wrap" style="margin-bottom:16px;"></div>
-      <div class="region-grid" id="region-grid"></div>
-      <div class="region-detail-grid" id="region-detail"></div>
-    </section>
-
-    <button class="refresh-btn" id="goto-country">국가별 보기 →</button>
+  <div class="card">
+    <div class="grid4" id="topSummary"></div>
   </div>
 
-  <!-- COUNTRY SUBPAGE -->
-  <div class="page" id="page-country">
-    <a class="back-link" id="back-to-main">← 메인으로</a>
-    <h2 style="font-size:16px; margin:12px 0;">국가별 상세 분석</h2>
-    <div class="filter-pill-row" id="channel-filter"></div>
-    <div class="filter-pill-row" id="tier-filter"></div>
-    <div class="filter-pill-row" id="country-region-filter"></div>
-    <div class="filter-row">
-      <label style="font-size:12px; color:var(--text-sub); margin-right:6px;">기준월</label>
-      <select id="month-select" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border);"></select>
-      <span style="font-size:11px; color:var(--text-mute); margin-left:8px;">지표를 클릭하면 1~12월 추이 팝업이 뜹니다</span>
-    </div>
-    <div class="tier-card">
-      <div style="overflow-x:auto;">
-        <table style="min-width:680px;" id="tier-table"></table>
-      </div>
-    </div>
-    <div id="modal-root"></div>
+  <div class="section-title">채널별 총예산</div>
+  <div class="grid4" id="channelCards" style="margin-bottom:20px;"></div>
+
+  <div class="section-title">국가별 예산 비중 (전체)</div>
+  <div class="card" id="countryShareCard"></div>
+
+  <div class="section-title">소진 알림</div>
+  <div class="grid3" id="alerts" style="margin-bottom:20px;"></div>
+
+  <div class="section-title">루틴 (국가 티어)</div>
+  <div class="card">
+    <table>
+      <thead><tr><td style="width:18%">국가</td><td style="width:24%">메타 예산/소진</td><td style="width:24%">틱톡 예산/소진</td><td style="width:17%" class="pct-r">현재 소진율</td><td style="width:17%" class="pct-r">예상 월말</td></tr></thead>
+      <tbody id="routineTable"></tbody>
+    </table>
+    <div class="footnote">메타루틴 / 틱톡루틴 raw 기준, 미국·일본 제외 전체 티어 국가</div>
   </div>
 
+  <div class="section-title">미국 · 일본</div>
+  <div class="card">
+    <table>
+      <thead><tr>
+        <td style="width:11%">국가</td>
+        <td style="width:17.8%">메타 예산/소진</td>
+        <td style="width:17.8%">틱톡 예산/소진</td>
+        <td style="width:17.8%">구글 예산/소진</td>
+        <td style="width:17.8%">팔로우광고 예산/소진</td>
+        <td style="width:17.8%">싱글원 예산/소진</td>
+      </tr></thead>
+      <tbody id="usJpTable"></tbody>
+    </table>
+    <div class="footnote">미국 메타 = 메타루틴(US) + 비욘드어스메타 합산 · 일본 메타 = 메타루틴(JP) · 팔로우광고 = 일본팔로우메타 · 싱글원 = 일본싱글원(엔화→원화 고정환율 환산)</div>
+  </div>
+
+  <div class="section-title">개별 운영 항목</div>
+  <div class="grid3" id="standaloneCards"></div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <script>
+/* ===================== 설정 ===================== */
 const SPREADSHEET_ID = "1-gZrBKjTlxhc6VCJWsFDjM6epwaGvGP5q81Dadx8SP8";
-const GIDS = { 틱톡:0, 틱톡아랍:703547167, 틱톡라탐:1724510644, 메타:1252891778, 구글:1157043789 };
-function gvizUrl(gid){ return `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`; }
-const CSV_URLS = Object.fromEntries(Object.entries(GIDS).map(([k,g]) => [k, gvizUrl(g)]));
+const JPY_TO_KRW_RATE = 9.2; // 고정환율: 1엔 = 9.2원 (실제 값으로 교체 필요)
 
-const CHANNEL_COLOR = { 틱톡:"#0F6E56", 메타:"#534AB7", 구글:"#993C1D" };
-
-const ISO_NAME = {
-  PL:"폴란드",KH:"캄보디아",EG:"이집트",AU:"호주",TR:"터키",AE:"아랍에미리트",VN:"베트남",ID:"인도네시아",
-  SA:"사우디아라비아",KW:"쿠웨이트",US:"미국",GB:"영국",UK:"영국",IT:"이탈리아",CO:"콜롬비아",CL:"칠레",
-  CZ:"체코",FR:"프랑스",ES:"스페인",JP:"일본",MX:"멕시코",PY:"파라과이",RO:"루마니아",UA:"우크라이나",
-  KZ:"카자흐스탄",NG:"나이지리아",ZA:"남아공",PE:"페루",AR:"아르헨티나",GR:"그리스",DE:"독일",NL:"네덜란드",
-  BE:"벨기에",PT:"포르투갈",CA:"캐나다",JO:"요르단",LB:"레바논",BH:"바레인",OM:"오만",MA:"모로코",
-  DZ:"알제리",TN:"튀니지",MY:"말레이시아",TH:"태국",PH:"필리핀",SG:"싱가포르",IN:"인도",PK:"파키스탄",
-  BD:"방글라데시",QA:"카타르",IQ:"이라크",SE:"스웨덴",DK:"덴마크",GE:"조지아",TW:"대만",PR:"푸에르토리코",
-  NO:"노르웨이",FI:"핀란드",CH:"스위스",AT:"오스트리아",IE:"아일랜드",HU:"헝가리",BG:"불가리아",
-  HK:"홍콩",BR:"브라질",IL:"이스라엘",CR:"코스타리카",KG:"키르기스스탄",
-  KU:"쿠웨이트", UAE:"아랍에미리트", // 시트에서 표준 ISO코드 대신 쓰는 비표준 축약형
+const SHEETS = {
+  budget: "월예산Budget",
+  beyondUs: "비욘드어스메타",
+  metaRoutine: "메타루틴",
+  jpTiktok: "일본틱톡",
+  tiktokRoutine: "틱톡루틴",
+  sparkAds: "스파크애즈틱톡",
+  gmvPdrn: "GMVMAX(PDRN)",
+  gmvAll: "GMVMAX(ALL)",
+  google: "구글",
+  jpSingleOne: "일본싱글원",
+  jpFollow: "일본팔로우메타",
+  kbeautyCandy: "K뷰티캔디"
 };
 
-// gviz(구글 시각화 API) 응답에서 날짜 타입 셀은 "Date(2026,0,1)" 형식(월은 0부터 시작)으로 내려오는
-// 경우가 있음 — 이걸 일반 "YYYY-MM-DD" 문자열로 정규화.
+function gvizUrl(sheetName){
+  return `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+}
+
+/* ===================== 국가 정규화 ===================== */
+const ISO_NAME = {US:"미국",JP:"일본",BR:"브라질",DE:"독일",FR:"프랑스",GB:"영국",PL:"폴란드",CZ:"체코",
+  SA:"사우디아라비아",AE:"아랍에미리트",EG:"이집트",IL:"이스라엘",MX:"멕시코",PY:"파라과이",CL:"칠레",
+  KH:"캄보디아",VN:"베트남",HK:"홍콩",TR:"터키",AU:"호주",GE:"조지아"};
+const ENGLISH_NAME = {"united states":"미국","japan":"일본","brazil":"브라질","germany":"독일","france":"프랑스",
+  "united kingdom":"영국","poland":"폴란드","czech republic":"체코","czechia":"체코","saudi arabia":"사우디아라비아",
+  "united arab emirates":"아랍에미리트","egypt":"이집트","israel":"이스라엘","mexico":"멕시코","paraguay":"파라과이",
+  "chile":"칠레","cambodia":"캄보디아","vietnam":"베트남","hong kong":"홍콩","turkey":"터키","australia":"호주",
+  "georgia":"조지아"};
+
+function normalizeCountry(v){
+  if(!v) return null;
+  const s = String(v).trim();
+  if(!s || /^unknown$/i.test(s)) return null;
+  if(ISO_NAME[s.toUpperCase()]) return ISO_NAME[s.toUpperCase()];
+  const en = ENGLISH_NAME[s.toLowerCase()];
+  if(en) return en;
+  return s; // 이미 한글 국가명인 경우 (구글 시트, 예산 시트 등)
+}
+
+/* 루틴 테이블 티어 (미국/일본 제외) */
+const COUNTRY_TIER = {
+  "사우디아라비아":1,"브라질":1,
+  "베트남":2,"터키":2,"폴란드":2,"독일":2,"프랑스":2,"멕시코":2,
+  "홍콩":3,"캄보디아":3,"조지아":3,"영국":3,"체코":3,"칠레":3,"파라과이":3,"아랍에미리트":3,"호주":3,"이집트":3,"이스라엘":3
+};
+
+/* ===================== 날짜 처리 ===================== */
 function normalizeDate(v){
-  if(!v) return v;
-  const s = String(v);
+  if(!v) return "";
+  const s = String(v).trim();
   const m = s.match(/^Date\((\d+),\s*(\d+),\s*(\d+)/);
   if(m){
-    const y = m[1], mo = String(parseInt(m[2],10)+1).padStart(2,"0"), d = String(parseInt(m[3],10)).padStart(2,"0");
+    const y=m[1], mo=String(parseInt(m[2],10)+1).padStart(2,"0"), d=String(parseInt(m[3],10)).padStart(2,"0");
     return `${y}-${mo}-${d}`;
   }
-  return s;
+  // "2026. 9. 30" 형식 (GMVMAX(ALL))
+  const dotted = s.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+  if(dotted){
+    return `${dotted[1]}-${dotted[2].padStart(2,"0")}-${dotted[3].padStart(2,"0")}`;
+  }
+  return s.slice(0,10);
+}
+function monthOf(dateStr){ return normalizeDate(dateStr).slice(0,7); }
+
+/* ===================== 숫자 파싱 ===================== */
+function num(v){
+  if(v===undefined||v===null||v==="") return 0;
+  const n = parseFloat(String(v).replace(/[",%]/g,""));
+  return isNaN(n) ? 0 : n;
 }
 
-// 국가명/ISO 코드 -> 표준 국가명, 권역 매핑
-const COUNTRY_REGION = {
-  "베트남":"동남아", "인도네시아":"동남아", "말레이시아":"동남아", "캄보디아":"동남아", "필리핀":"동남아", "태국":"동남아", "싱가포르":"동남아",
-
-  "사우디아라비아":"중동", "아랍에미리트":"중동", "쿠웨이트":"중동", "이집트":"중동", "카타르":"중동", "이라크":"중동",
-  "요르단":"중동", "레바논":"중동", "바레인":"중동", "오만":"중동", "모로코":"중동", "알제리":"중동", "튀니지":"중동", "이스라엘":"중동",
-
-  "터키":"유럽", "폴란드":"유럽", "이탈리아":"유럽", "영국":"유럽", "그리스":"유럽", "체코":"유럽", "루마니아":"유럽",
-  "우크라이나":"유럽", "카자흐스탄":"유럽", "프랑스":"유럽", "스페인":"유럽", "독일":"유럽", "네덜란드":"유럽", "벨기에":"유럽", "포르투갈":"유럽",
-  "스웨덴":"유럽", "덴마크":"유럽", "조지아":"유럽", "노르웨이":"유럽", "핀란드":"유럽", "스위스":"유럽", "오스트리아":"유럽", "아일랜드":"유럽", "헝가리":"유럽", "불가리아":"유럽", "키르기스스탄":"유럽",
-
-  "칠레":"남미", "아르헨티나":"남미", "페루":"남미", "콜롬비아":"남미", "코스타리카":"남미", "멕시코":"남미", "파라과이":"남미", "푸에르토리코":"남미", "브라질":"남미",
-
-  "미국":"북미", "캐나다":"북미",
-
-  "일본":"아시아", "인도":"아시아", "파키스탄":"아시아", "방글라데시":"아시아", "대만":"아시아", "홍콩":"아시아",
-
-  "나이지리아":"기타", "남아공":"기타",
-};
-function regionOf(country){ return COUNTRY_REGION[country] || "기타"; }
-function regionOfRow(r){ return r.region || regionOf(r.country); }
-
-// 국가 한글명 -> ISO-3166-1 숫자코드 (world-atlas topojson과 매칭용)
-// 국가 티어 (마케팅 우선순위 등급)
-const COUNTRY_TIER = {
-  "미국":1, "일본":1, "브라질":1, "사우디아라비아":1,
-  "베트남":2, "터키":2, "폴란드":2, "독일":2, "프랑스":2, "멕시코":2,
-  "홍콩":3, "캄보디아":3, "조지아":3, "영국":3, "체코":3, "칠레":3, "파라과이":3, "아랍에미리트":3, "호주":3, "이집트":3, "이스라엘":3,
-};
-const TIER_COLOR = {1:"#D85A30", 2:"#0F6E56", 3:"#534AB7"};
-
-const COUNTRY_NUMERIC = {
-  "베트남":"704","인도네시아":"360","말레이시아":"458","캄보디아":"116","필리핀":"608","태국":"764","싱가포르":"702",
-  "사우디아라비아":"682","아랍에미리트":"784","쿠웨이트":"414","이집트":"818","카타르":"634","이라크":"368","요르단":"400",
-  "레바논":"422","바레인":"48","모로코":"504","알제리":"12","튀니지":"788","이스라엘":"376",
-  "터키":"792","폴란드":"616","이탈리아":"380","영국":"826","그리스":"300","체코":"203","루마니아":"642","우크라이나":"804",
-  "카자흐스탄":"398","프랑스":"250","스페인":"724","독일":"276","네덜란드":"528","벨기에":"56","포르투갈":"620","스웨덴":"752",
-  "덴마크":"208","조지아":"268","노르웨이":"578","핀란드":"246","스위스":"756","오스트리아":"40","아일랜드":"372","헝가리":"348","불가리아":"100",
-  "칠레":"152","아르헨티나":"32","페루":"604","콜롬비아":"170","코스타리카":"188","멕시코":"484","파라과이":"600","푸에르토리코":"630","브라질":"76",
-  "미국":"840","캐나다":"124",
-  "일본":"392","인도":"356","파키스탄":"586","방글라데시":"50","대만":"158","홍콩":"344",
-  "나이지리아":"566","남아공":"710","호주":"36","키르기스스탄":"417",
-};
-const NUMERIC_TO_COUNTRY = Object.fromEntries(Object.entries(COUNTRY_NUMERIC).map(([k,v])=>[v,k]));
-
-let worldTopo = null;
-async function ensureWorldTopo(){
-  if(worldTopo) return worldTopo;
-  const res = await fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json");
-  worldTopo = await res.json();
-  return worldTopo;
-}
-
-async function renderWorldMap(byCountrySpend, totalSpend){
-  const wrap = document.getElementById("world-map-wrap");
-  try{
-    if(typeof d3 === "undefined") throw new Error("d3 라이브러리 로드 실패");
-    if(typeof topojson === "undefined") throw new Error("topojson-client 라이브러리 로드 실패");
-    const topo = await ensureWorldTopo();
-
-    const width = wrap.clientWidth || 900, height = Math.round(width*0.5);
-    wrap.innerHTML = "";
-    const svg = d3.select(wrap).append("svg").attr("viewBox", `0 0 ${width} ${height}`).style("width","100%").style("height","auto");
-    const projection = d3.geoNaturalEarth1().fitSize([width, height], topojson.feature(topo, topo.objects.countries));
-    const path = d3.geoPath(projection);
-    const countries = topojson.feature(topo, topo.objects.countries).features;
-
-    const tooltip = d3.select(wrap).append("div")
-      .style("position","absolute").style("pointer-events","none").style("background","#2C2C2A").style("color","#fff")
-      .style("padding","4px 8px").style("border-radius","6px").style("font-size","11px").style("opacity",0).style("z-index",10);
-    wrap.style.position = "relative";
-
-    svg.selectAll("path")
-      .data(countries)
-      .join("path")
-      .attr("d", path)
-      .attr("fill", d => {
-        const name = NUMERIC_TO_COUNTRY[String(d.id)];
-        if(!name) return "#EDEAE1";
-        const reg = regionOf(name);
-        return REGION_BG[reg] || "#EDEAE1";
-      })
-      .attr("stroke", "#fff").attr("stroke-width", 0.5)
-      .style("cursor","pointer")
-      .on("mousemove", function(evt, d){
-        const name = NUMERIC_TO_COUNTRY[String(d.id)];
-        const spend = name ? (byCountrySpend[name]||0) : 0;
-        if(!name || !spend){ tooltip.style("opacity",0); return; }
-        const p = spend/totalSpend*100;
-        const rect = wrap.getBoundingClientRect();
-        tooltip.style("opacity",1)
-          .html(`<b>${name}</b><br>${fmt(spend)} · ${p.toFixed(1)}%`)
-          .style("left", (evt.clientX-rect.left+10)+"px")
-          .style("top", (evt.clientY-rect.top+10)+"px");
-      })
-      .on("mouseleave", ()=>tooltip.style("opacity",0))
-      .on("click", function(evt, d){
-        const name = NUMERIC_TO_COUNTRY[String(d.id)];
-        if(name){ selectedRegion = regionOf(name); renderRegions(); }
-      });
-
-    // 티어1/2만 라벨 대상, 티어3+지출상위는 점만 (호버로 정보 확인)
-    const MAX_DOTS = 30;
-    const tierEntries = Object.keys(COUNTRY_TIER)
-      .filter(c => (byCountrySpend[c]||0) > 0 && COUNTRY_NUMERIC[c])
-      .sort((a,b) => COUNTRY_TIER[a]-COUNTRY_TIER[b]);
-    const topSpendFill = Object.entries(byCountrySpend)
-      .filter(([c,v]) => v > 0 && COUNTRY_NUMERIC[c] && !COUNTRY_TIER[c])
-      .sort((a,b) => b[1]-a[1])
-      .map(([c]) => c);
-    const fillSlots = Math.max(0, MAX_DOTS - tierEntries.length);
-    const dotCountries = [...tierEntries, ...topSpendFill.slice(0, fillSlots)];
-    const dotSet = new Set(dotCountries);
-    const dotFeatures = countries.filter(d => dotSet.has(NUMERIC_TO_COUNTRY[String(d.id)]));
-
-    // 점(모든 대상 국가)
-    svg.selectAll("circle.country-dot")
-      .data(dotFeatures)
-      .join("circle")
-      .attr("class","country-dot")
-      .attr("cx", d => path.centroid(d)[0])
-      .attr("cy", d => path.centroid(d)[1])
-      .attr("r", d => { const t = COUNTRY_TIER[NUMERIC_TO_COUNTRY[String(d.id)]]; return t===1?5:t===2?4:3; })
-      .attr("fill", d => { const t = COUNTRY_TIER[NUMERIC_TO_COUNTRY[String(d.id)]]; return t===1?"#D85A30":t===2?"#0F6E56":"#534AB7"; })
-      .attr("stroke","#fff").attr("stroke-width",1.2)
-      .style("cursor","pointer")
-      .on("mousemove", function(evt, d){
-        const name = NUMERIC_TO_COUNTRY[String(d.id)];
-        const spend = byCountrySpend[name]||0;
-        const p = spend/totalSpend*100;
-        const rect = wrap.getBoundingClientRect();
-        tooltip.style("opacity",1)
-          .html(`<b>${name}</b>${COUNTRY_TIER[name]?' [T'+COUNTRY_TIER[name]+']':''}<br>${fmt(spend)} · ${p.toFixed(1)}%`)
-          .style("left", (evt.clientX-rect.left+10)+"px")
-          .style("top", (evt.clientY-rect.top+10)+"px");
-      })
-      .on("mouseleave", ()=>tooltip.style("opacity",0))
-      .on("click", function(evt, d){
-        const name = NUMERIC_TO_COUNTRY[String(d.id)];
-        if(name){ selectedRegion = regionOf(name); renderRegions(); }
-      });
-
-    // 티어1/2만 텍스트 라벨 (서로 멀리 떨어져 있는 편이라 클러스터링 부담 적음)
-    const labelCountries = tierEntries.filter(c => COUNTRY_TIER[c] <= 2);
-    const labelFeatures = countries.filter(d => labelCountries.includes(NUMERIC_TO_COUNTRY[String(d.id)]));
-    const labelPoints = labelFeatures.map(d => {
-      const name = NUMERIC_TO_COUNTRY[String(d.id)];
-      const [x,y] = path.centroid(d);
-      return { name, x, y };
-    }).filter(p => isFinite(p.x) && isFinite(p.y));
-
-    function clusterPoints(pts, threshold){
-      const used = new Array(pts.length).fill(false);
-      const clusters = [];
-      for(let i=0;i<pts.length;i++){
-        if(used[i]) continue;
-        const cluster = [pts[i]]; used[i]=true;
-        for(let j=i+1;j<pts.length;j++){
-          if(used[j]) continue;
-          const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y;
-          if(Math.sqrt(dx*dx+dy*dy) < threshold){ cluster.push(pts[j]); used[j]=true; }
-        }
-        clusters.push(cluster);
-      }
-      return clusters;
-    }
-    const clusters = clusterPoints(labelPoints, 26);
-
-    const placed = [];
-    clusters.forEach(cluster => {
-      if(cluster.length === 1){
-        placed.push({...cluster[0], lx:cluster[0].x, ly:cluster[0].y, leader:false});
-        return;
-      }
-      const cx = d3.mean(cluster, p=>p.x), topY = d3.min(cluster, p=>p.y);
-      const anchorY = topY - 56;
-      const sorted = [...cluster].sort((a,b) => (COUNTRY_TIER[a.name]||9) - (COUNTRY_TIER[b.name]||9));
-      sorted.forEach((p, i) => {
-        placed.push({...p, lx:cx, ly:anchorY - i*20, leader:true});
-      });
+/* ===================== CSV 로드 ===================== */
+const FETCH_ERRORS = [];
+function loadSheet(key){
+  return new Promise((resolve)=>{
+    Papa.parse(gvizUrl(SHEETS[key]), {
+      download:true, header:true, skipEmptyLines:true,
+      complete: (res)=> resolve(res.data || []),
+      error: (err)=>{ FETCH_ERRORS.push(`${SHEETS[key]}: ${err}`); resolve([]); }
     });
-
-    const FONT_SIZE = { 1:{name:14}, 2:{name:10.5} };
-    function sizeFor(name){ return (FONT_SIZE[COUNTRY_TIER[name]] || FONT_SIZE[2]).name; }
-
-    svg.selectAll("line.leader")
-      .data(placed.filter(p=>p.leader))
-      .join("line")
-      .attr("class","leader")
-      .attr("x1", p=>p.x).attr("y1", p=>p.y)
-      .attr("x2", p=>p.lx).attr("y2", p=>p.ly)
-      .attr("stroke", "#999").attr("stroke-width", 0.8);
-
-    const labelGroup = svg.selectAll("g.map-label")
-      .data(placed)
-      .join("g")
-      .attr("class","map-label")
-      .attr("transform", p => `translate(${p.lx},${p.ly})`)
-      .style("pointer-events","none");
-
-    labelGroup.append("text")
-      .attr("text-anchor","middle")
-      .attr("dy", p => COUNTRY_TIER[p.name]===1 ? "-8px" : "-2px")
-      .style("font-size", p => sizeFor(p.name) + "px")
-      .style("font-weight","700")
-      .style("paint-order","stroke").style("stroke","#fff").style("stroke-width","3px")
-      .style("fill","#2C2C2A")
-      .text(p => `[T${COUNTRY_TIER[p.name]}] ${p.name}`);
-
-    labelGroup.filter(p => COUNTRY_TIER[p.name]===1).append("text")
-      .attr("text-anchor","middle")
-      .attr("dy","9px")
-      .style("font-size","11px")
-      .style("paint-order","stroke").style("stroke","#fff").style("stroke-width","3px")
-      .style("fill","#6B6A63")
-      .text(p => {
-        const v = byCountrySpend[p.name] || 0;
-        return fmt(v) + " · " + (v/totalSpend*100).toFixed(1) + "%";
-      });
-  }catch(e){
-    wrap.innerHTML = `<div style="padding:16px; font-size:12px; color:var(--text-sub); background:#FCEBEB; border-radius:8px;">지도 렌더링 실패: ${e.message}</div>`;
-  }
+  });
 }
 
-const REGION_COLOR = { 동남아:"#0F6E56", 중동:"#534AB7", 유럽:"#993C1D", 남미:"#993556", 북미:"#854F0B", 아시아:"#185FA5", 기타:"#5F5E5A" };
-const REGION_BG = { 동남아:"#E1F5EE", 중동:"#EEEDFE", 유럽:"#FAECE7", 남미:"#FBEAF0", 북미:"#FAEEDA", 아시아:"#E6F1FB", 기타:"#F1EFE8" };
+/* ===================== 메인 로직 ===================== */
+let DATA = {}; // key -> rows
+let SELECTED_MONTH = null;
 
-let ALL_ROWS = [];
-let UNMATCHED = [];
-let UNMAPPED_COUNTRIES = [];
+async function init(){
+  const keys = Object.keys(SHEETS);
+  const results = await Promise.all(keys.map(loadSheet));
+  keys.forEach((k,i)=> DATA[k]=results[i]);
 
-function fmt(n){ if(n===null||n===undefined||isNaN(n)) return "–"; return Math.round(n).toLocaleString(); }
-function pct(n){ if(n===null||n===undefined||isNaN(n)) return "–"; return n.toFixed(2)+"%"; }
-function num(v){ const n = parseFloat(String(v).replace(/,/g,"")); return isNaN(n)?0:n; }
-
-// 국가 별칭(축약형 등) 정리
-const COUNTRY_ALIAS = { "사우디":"사우디아라비아", "UK":"영국", "GB":"영국" };
-
-// 영문 국가명 -> 한글 (새 틱톡 "국가/지역" 리포트가 영문명을 씀)
-const ENGLISH_NAME = {
-  "vietnam":"베트남","indonesia":"인도네시아","malaysia":"말레이시아","cambodia":"캄보디아","philippines":"필리핀","thailand":"태국","singapore":"싱가포르",
-  "saudi arabia":"사우디아라비아","united arab emirates":"아랍에미리트","kuwait":"쿠웨이트","egypt":"이집트","qatar":"카타르","iraq":"이라크",
-  "jordan":"요르단","lebanon":"레바논","bahrain":"바레인","oman":"오만","morocco":"모로코","algeria":"알제리","tunisia":"튀니지","israel":"이스라엘",
-  "turkey":"터키","turkiye":"터키","poland":"폴란드","italy":"이탈리아","united kingdom":"영국","greece":"그리스","czechia":"체코","czech republic":"체코",
-  "romania":"루마니아","ukraine":"우크라이나","kazakhstan":"카자흐스탄","france":"프랑스","spain":"스페인","germany":"독일","netherlands":"네덜란드",
-  "belgium":"벨기에","portugal":"포르투갈","sweden":"스웨덴","denmark":"덴마크","georgia":"조지아","norway":"노르웨이","finland":"핀란드",
-  "switzerland":"스위스","austria":"오스트리아","ireland":"아일랜드","hungary":"헝가리","bulgaria":"불가리아",
-  "chile":"칠레","argentina":"아르헨티나","peru":"페루","colombia":"콜롬비아","costa rica":"코스타리카","mexico":"멕시코","paraguay":"파라과이",
-  "puerto rico":"푸에르토리코","brazil":"브라질",
-  "united states":"미국","usa":"미국","canada":"캐나다",
-  "japan":"일본","india":"인도","pakistan":"파키스탄","bangladesh":"방글라데시","taiwan":"대만","taiwan province of china":"대만","hong kong":"홍콩",
-  "nigeria":"나이지리아","south africa":"남아공","australia":"호주","kyrgyzstan":"키르기스스탄",
-};
-
-function normalizeCountry(raw){
-  if(!raw) return raw;
-  let t = String(raw).trim();
-  if(ISO_NAME[t]) return ISO_NAME[t];
-  if(COUNTRY_ALIAS[t]) return COUNTRY_ALIAS[t];
-  const lower = t.replace(/,/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
-  if(ENGLISH_NAME[lower]) return ENGLISH_NAME[lower];
-  return t; // 이미 한글 국가명이거나, 매핑 안 된 값은 그대로
-}
-function isUnknownValue(raw){
-  if(!raw) return true;
-  return String(raw).trim().toLowerCase() === "unknown";
-}
-
-function regionFromNames(names){
-  const counts = {};
-  names.forEach(n => { const r = COUNTRY_REGION[n]; if(r) counts[r]=(counts[r]||0)+1; });
-  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-  return entries.length ? entries[0][0] : "기타";
-}
-
-// 캠페인명 하나에서 {country, region} 을 뽑아낸다. 못 찾으면 null.
-function parseCountryInfo(campaign){
-  if(!campaign) return null;
-
-  // 1) "(Arabic강)", "(Arabic약)", "(Arabic)", "(Latam강)", "(Latam약)" — 구체 국가 없는 권역 플레이스홀더
-  let m = campaign.match(/\((Arabic|Latam)(강|약)?\)/i);
-  if(m){
-    const region = m[1].toLowerCase()==="arabic" ? "중동" : "남미";
-    return { country: (m[1]==="Arabic"?"아랍권":"라틴아메리카") + " 통합집행(세부미분류)", region };
+  if(FETCH_ERRORS.length){
+    const el = document.getElementById("error-banner");
+    el.style.display="block";
+    el.textContent = "일부 시트를 불러오지 못했습니다: " + FETCH_ERRORS.join(" / ");
   }
 
-  // 2) "[강 - SA UAE]" / "[약 - KU QA EG]" / 라탐탭의 "[강 - MX CL PR]" 등 코드 나열형 통합집행
-  m = campaign.match(/\[(?:강|약)\s*-\s*([A-Z]+(?:\s+[A-Z]+)*)\]/);
-  if(m){
-    const codes = m[1].trim().split(/\s+/);
-    const names = codes.map(c => normalizeCountry(c));
-    const region = regionFromNames(names);
-    return { country: names.join("+") + "(통합집행)", region };
-  }
-
-  // 3) "_02(베트남)_" 또는 "11월 01(이라크)_" 처럼 숫자+괄호 붙는 표준 패턴
-  m = campaign.match(/\d+\s*\(([^)]+)\)/);
-  if(m){
-    const country = normalizeCountry(m[1]);
-    return { country, region: regionOf(country) };
-  }
-
-  // 4) "(국가명)_[" 패턴 — 알려진 국가/코드일 때만 인정 (아니면 쓰레기값 방지)
-  m = campaign.match(/\(([^)]+)\)_\[/);
-  if(m){
-    const country = normalizeCountry(m[1]);
-    if(COUNTRY_REGION[country] || ISO_NAME[m[1]]) return { country, region: regionOf(country) };
-  }
-
-  // 5) 레거시: 괄호 없이 국가명이 텍스트 중간에 그대로 들어간 경우
-  const known = Object.keys(COUNTRY_REGION);
-  for(const c of known){
-    if(campaign.includes(c)) return { country:c, region:regionOf(c) };
-  }
-
-  return null;
-}
-
-function parseTikTok(csvText, subTag){
-  const parsed = Papa.parse(csvText, {header:true, skipEmptyLines:true});
-  const rows = [];
-  const UNKNOWN_SEEN = new Set();
-  parsed.data.forEach(r => {
-    // 새 포맷: 계정 이름, 캠페인 이름, 광고 그룹 이름, 광고 이름, 일별, 국가/지역, 지출, 노출수, 클릭수(목적지), ...
-    const date = normalizeDate(r["일별"]);
-    const spend = num(r["지출"]);
-    const impr = num(r["노출수"]);
-    const clicks = num(r["클릭수(목적지)"]);
-    const rawCountry = r["국가/지역"];
-    if(!date) return;
-
-    let country;
-    if(isUnknownValue(rawCountry)){
-      UNMATCHED.push({channel:"틱톡", sub:subTag, campaign:r["캠페인 이름"]||"", spend});
-      country = "미분류";
-    } else {
-      country = normalizeCountry(rawCountry);
-      const dedupKey = country.toLowerCase();
-      if(!COUNTRY_REGION[country] && !UNKNOWN_SEEN.has(dedupKey)){
-        UNKNOWN_SEEN.add(dedupKey);
-        UNMAPPED_COUNTRIES.push({channel:"틱톡", sub:subTag, raw:rawCountry, resolved:country});
-      }
-    }
-    rows.push({channel:"틱톡", country, date, spend, impr, clicks});
+  // 사용 가능한 월 목록 (예산 시트 기준)
+  const months = Array.from(new Set(DATA.budget.map(r=>r["월"]).filter(Boolean))).sort();
+  const sel = document.getElementById("monthSelect");
+  months.forEach(m=>{
+    const opt = document.createElement("option");
+    opt.value = m; opt.textContent = m.replace("-","년 ")+"월";
+    sel.appendChild(opt);
   });
-  return rows;
+  SELECTED_MONTH = months[months.length-1];
+  sel.value = SELECTED_MONTH;
+  sel.addEventListener("change", ()=>{ SELECTED_MONTH = sel.value; render(); });
+
+  render();
 }
 
-function parseMeta(csvText){
-  const parsed = Papa.parse(csvText, {header:true, skipEmptyLines:true});
-  const rows = [];
-  parsed.data.forEach(r => {
-    const date = normalizeDate(r["일"]);
-    const countryCode = r["국가"];
-    const spend = num(r["지출 금액 (KRW)"]);
-    const impr = num(r["노출"]);
-    const clicks = num(r["링크 클릭"] || r["클릭(전체)"]);
-    if(!date) return;
-    const country = isUnknownValue(countryCode) ? "미분류" : normalizeCountry(countryCode);
-    rows.push({channel:"메타", country, date, spend, impr, clicks});
-  });
-  return rows;
-}
+/* 예산 집계: 국가/매체별 버킷 + 특수 항목 분리 */
+function aggregateBudget(month){
+  const rows = DATA.budget.filter(r=>r["월"]===month);
+  const buckets = {}; // "국가|매체" -> 금액
+  const special = { gmv:0, sparkAds:0, singleOne:0, follow:0, kbeauty:0 };
 
-function parseGoogle(csvText){
-  const parsed = Papa.parse(csvText, {header:true, skipEmptyLines:true});
-  const rows = [];
-  parsed.data.forEach(r => {
-    const date = normalizeDate(r["일"]);
-    const spend = num(r["비용"]);
-    const impr = num(r["노출수"]);
-    const clicks = num(r["클릭수"]);
-    const adType = r["광고 유형"] || "기타";
-    if(!date) return;
-    if(spend===0 && impr===0 && clicks===0) return;
-    rows.push({channel:"구글", country:"미국", date, spend, impr, clicks, adType});
-  });
-  return rows;
-}
+  rows.forEach(r=>{
+    const adType = (r["광고유형"]||"").trim();
+    const item = (r["캠페인/항목"]||"").trim();
+    const country = (r["국가"]||"").trim();
+    const media = (r["매체"]||"").trim();
+    const amount = num(r["예산(원)"]);
 
-async function loadAll(force){
-  document.getElementById("last-updated").textContent = "데이터 불러오는 중…";
-  ALL_ROWS = [];
-  UNMATCHED = [];
-  UNMAPPED_COUNTRIES = [];
-  const FETCH_ERRORS = [];
-  const bust = force ? ("&_="+Date.now()) : "";
-  const entries = Object.entries(CSV_URLS);
-  const results = await Promise.all(entries.map(async ([name,u]) => {
-    try{
-      const res = await fetch(u+bust);
-      if(!res.ok) throw new Error("HTTP "+res.status);
-      const text = await res.text();
-      if(!text || text.length < 5) throw new Error("빈 응답");
-      return text;
-    }catch(e){
-      FETCH_ERRORS.push(name+": "+e.message);
-      return "";
-    }
-  }));
-  const [tt, tta, ttl, meta, google] = results;
-  try{
-    ALL_ROWS = ALL_ROWS.concat(
-      parseTikTok(tt, "본사"),
-      parseTikTok(tta, "아랍"),
-      parseTikTok(ttl, "라탐"),
-      parseMeta(meta),
-      parseGoogle(google)
-    );
-  }catch(e){
-    FETCH_ERRORS.push("파싱 오류: "+e.message);
-  }
-  document.getElementById("last-updated").textContent = "마지막 갱신: " + new Date().toLocaleString("ko-KR") + (FETCH_ERRORS.length ? " (일부 실패)" : "");
-  renderWarnings(FETCH_ERRORS);
-  renderAll();
-}
+    if(adType==="국내광고") return; // 완전 제외
+    if(item==="틱톡샵 GMV"){ special.gmv += amount; return; }
+    if(item==="틱톡샵 자체 광고"){ special.sparkAds += amount; return; }
+    if(item==="싱글원"){ special.singleOne += amount; return; }
+    if(adType==="팔로우광고"){ special.follow += amount; return; }
+    if(adType==="K뷰티 캔디"){ special.kbeauty += amount; return; }
 
-function renderWarnings(fetchErrors){
-  const area = document.getElementById("warn-area");
-  let html = "";
-  if(fetchErrors && fetchErrors.length){
-    html += `<div class="warn-box" style="background:#FCEBEB; border-color:#F0999; color:#791F1F;">⚠ 시트 불러오기 실패: ${fetchErrors.join(" / ")}<br>CORS나 시트 공개설정 문제일 수 있습니다. 시트가 "링크가 있는 모든 사용자에게 공개"로 설정되어 있는지 확인해주세요.</div>`;
-  }
-  if(UNMATCHED.length > 0){
-    const totalSpend = UNMATCHED.reduce((a,b)=>a+b.spend,0);
-    const samples = Array.from(new Set(UNMATCHED.map(u=>u.campaign))).slice(0,5);
-    html += `<div class="warn-box">⚠ 국가/지역 값이 비어있는 행이 ${UNMATCHED.length}건 있습니다 (지출 합계 ${fmt(totalSpend)}원).<br>샘플 캠페인명: ${samples.map(s=>`<code style="font-size:10px;">${s}</code>`).join(" · ")}</div>`;
-  }
-  if(UNMAPPED_COUNTRIES.length > 0){
-    const list = UNMAPPED_COUNTRIES.map(u=>`"${u.raw}"→${u.resolved}`).join(", ");
-    html += `<div class="warn-box">ℹ 사전에 없는 국가값이 있어 "기타"로 분류됩니다: ${list}<br>알려주시면 매핑표에 추가할게요.</div>`;
-  }
-  area.innerHTML = html;
-}
-
-function getMonthKey(dateStr){
-  return dateStr ? dateStr.slice(0,7) : null; // YYYY-MM
-}
-
-let selectedMonth = null; // null = 전체, else "YYYY-MM"
-
-function monthList(){
-  const set = new Set(ALL_ROWS.map(r=>getMonthKey(r.date)).filter(Boolean));
-  return Array.from(set).sort();
-}
-
-function filteredRows(monthKey){
-  if(!monthKey) return ALL_ROWS;
-  return ALL_ROWS.filter(r => getMonthKey(r.date) === monthKey);
-}
-
-function renderMonthFilter(){
-  const months = monthList();
-  const box = document.getElementById("month-filter");
-  box.innerHTML = "";
-  const allBtn = document.createElement("button");
-  allBtn.className = "month-btn" + (selectedMonth===null ? " active":"");
-  allBtn.textContent = "전체";
-  allBtn.onclick = () => { selectedMonth = null; renderAll(); };
-  box.appendChild(allBtn);
-  months.forEach(m => {
-    const b = document.createElement("button");
-    b.className = "month-btn" + (selectedMonth===m ? " active":"");
-    b.textContent = m.slice(5,7)+"월";
-    b.onclick = () => { selectedMonth = (selectedMonth===m ? null : m); renderAll(); };
-    box.appendChild(b);
-  });
-}
-
-function renderKpis(){
-  const rows = filteredRows(selectedMonth);
-  const channels = ["틱톡","메타","구글"];
-  const byChannel = {};
-  channels.forEach(ch => {
-    const cr = rows.filter(r=>r.channel===ch);
-    byChannel[ch] = {
-      spend: cr.reduce((a,b)=>a+b.spend,0),
-      impr: cr.reduce((a,b)=>a+b.impr,0),
-      clicks: cr.reduce((a,b)=>a+b.clicks,0),
-    };
-  });
-  const total = {
-    spend: channels.reduce((a,ch)=>a+byChannel[ch].spend,0),
-    impr: channels.reduce((a,ch)=>a+byChannel[ch].impr,0),
-    clicks: channels.reduce((a,ch)=>a+byChannel[ch].clicks,0),
-  };
-  const cpc = total.clicks ? total.spend/total.clicks : null;
-  const ctr = total.impr ? total.clicks/total.impr*100 : null;
-  const cpm = total.impr ? total.spend/total.impr*1000 : null;
-
-  const grid = document.getElementById("kpi-grid");
-  grid.innerHTML = "";
-
-  function card(label, mainVal, breakdownFn){
-    const div = document.createElement("div");
-    div.className = "kpi-card";
-    let html = `<div class="label">${label}</div><div class="value">${mainVal}</div>`;
-    channels.forEach(ch => {
-      html += `<div class="breakdown"><span class="tag">ㄴ</span>${ch}: ${breakdownFn(ch)}</div>`;
-    });
-    div.innerHTML = html;
-    return div;
-  }
-
-  grid.appendChild(card("총 지출 (KRW)", fmt(total.spend), ch=>fmt(byChannel[ch].spend)));
-  grid.appendChild(card("노출", fmt(total.impr), ch=>fmt(byChannel[ch].impr)));
-  grid.appendChild(card("링크 클릭", fmt(total.clicks), ch=>fmt(byChannel[ch].clicks)));
-  grid.appendChild(card("CPC", fmt(cpc), ch=>{ const d=byChannel[ch]; return d.clicks? fmt(d.spend/d.clicks):"–"; }));
-  grid.appendChild(card("CTR", pct(ctr), ch=>{ const d=byChannel[ch]; return d.impr? pct(d.clicks/d.impr*100):"–"; }));
-  grid.appendChild(card("CPM", fmt(cpm), ch=>{ const d=byChannel[ch]; return d.impr? fmt(d.spend/d.impr*1000):"–"; }));
-}
-
-function renderBoxes(){
-  const months = monthList();
-  const visibleMonths = selectedMonth ? [selectedMonth] : months;
-  const row = document.getElementById("box-row");
-  row.innerHTML = "";
-
-  function channelMonthlySpend(ch, m){
-    return ALL_ROWS.filter(r=>r.channel===ch && getMonthKey(r.date)===m).reduce((a,b)=>a+b.spend,0);
-  }
-
-  ["틱톡","메타","구글"].forEach(ch => {
-    const box = document.createElement("div");
-    box.className = "box";
-    let rowsHtml = "";
-    visibleMonths.forEach(m => {
-      const v = channelMonthlySpend(ch, m);
-      rowsHtml += `<tr><td class="label">${m.slice(5,7)}월</td><td>${v?fmt(v):'<span class="dim">–</span>'}</td></tr>`;
-    });
-    const total = visibleMonths.reduce((a,m)=>a+channelMonthlySpend(ch,m),0);
-    box.innerHTML = `
-      <div class="head"><span class="dot" style="background:${CHANNEL_COLOR[ch]}"></span>${ch}${ch==='구글'?'(미국)':''}</div>
-      <div class="sub">합계 ${fmt(total)}</div>
-      <table>${rowsHtml}</table>`;
-    row.appendChild(box);
+    const key = country+"|"+media;
+    buckets[key] = (buckets[key]||0) + amount;
   });
 
-  const totalBox = document.createElement("div");
-  totalBox.className = "box total";
-  let rowsHtml = "";
-  let grand = 0;
-  visibleMonths.forEach(m => {
-    const v = ["틱톡","메타","구글"].reduce((a,ch)=>a+channelMonthlySpend(ch,m),0);
-    grand += v;
-    rowsHtml += `<tr><td class="label" style="font-weight:600;">${m.slice(5,7)}월</td><td style="font-weight:600;">${v?fmt(v):'<span class="dim">–</span>'}</td></tr>`;
-  });
-  totalBox.innerHTML = `<div class="head">월별 합산</div><div class="sub">합계 ${fmt(grand)}</div><table>${rowsHtml}</table>`;
-  row.appendChild(totalBox);
+  return { buckets, special };
 }
 
-let selectedRegion = null;
-
-function renderRegions(){
-  const rows = filteredRows(selectedMonth);
-  const byRegion = {};
-  rows.forEach(r => {
-    const reg = regionOfRow(r);
-    byRegion[reg] = byRegion[reg] || {spend:0, countries:{}};
-    byRegion[reg].spend += r.spend;
-    byRegion[reg].countries[r.country] = (byRegion[reg].countries[r.country]||0) + r.spend;
+/* 실적 집계 헬퍼: rows를 국가별로 그룹핑해서 지출 합산 */
+function sumByCountry(rows, dateField, countryField, spendField, month, rateMultiplier){
+  const out = {};
+  rows.forEach(r=>{
+    if(monthOf(r[dateField]) !== month) return;
+    const c = normalizeCountry(r[countryField]);
+    if(!c) return;
+    const spend = num(r[spendField]) * (rateMultiplier||1);
+    out[c] = (out[c]||0) + spend;
   });
-  const totalSpend = Object.values(byRegion).reduce((a,b)=>a+b.spend,0) || 1;
-
-  const byCountrySpend = {};
-  rows.forEach(r => { byCountrySpend[r.country] = (byCountrySpend[r.country]||0) + r.spend; });
-  renderWorldMap(byCountrySpend, totalSpend);
-
-  const grid = document.getElementById("region-grid");
-  grid.innerHTML = "";
-  Object.entries(byRegion).sort((a,b)=>b[1].spend-a[1].spend).forEach(([reg, data]) => {
-    const p = data.spend/totalSpend*100;
-    const badge = document.createElement("div");
-    badge.className = "region-badge" + (selectedRegion===reg ? " selected":"");
-    badge.style.background = REGION_BG[reg] || "#eee";
-    badge.innerHTML = `<div class="name" style="color:${REGION_COLOR[reg]||'#333'}">${reg}</div><div class="amt" style="color:${REGION_COLOR[reg]||'#333'}">${fmt(data.spend)} · ${p.toFixed(1)}%</div>`;
-    badge.onclick = () => { selectedRegion = (selectedRegion===reg? null:reg); renderRegions(); };
-    grid.appendChild(badge);
+  return out;
+}
+function sumTotal(rows, dateField, spendField, month, rateMultiplier){
+  let total = 0;
+  rows.forEach(r=>{
+    if(monthOf(r[dateField]) !== month) return;
+    total += num(r[spendField]) * (rateMultiplier||1);
   });
-
-  const detailWrap = document.getElementById("region-detail");
-  detailWrap.innerHTML = "";
-  const regionsToShow = selectedRegion ? [selectedRegion] : Object.keys(byRegion);
-  regionsToShow.forEach(reg => {
-    const data = byRegion[reg];
-    if(!data) return;
-    const box = document.createElement("div");
-    box.className = "box";
-    const countryRows = Object.entries(data.countries).sort((a,b)=>b[1]-a[1]).map(([c,v]) => {
-      const p = totalSpend ? (v/totalSpend*100) : 0;
-      const tier = COUNTRY_TIER[c];
-      const tierBadge = tier ? `<span style="display:inline-block; font-size:9px; font-weight:700; padding:1px 5px; border-radius:8px; margin-right:5px; background:${TIER_COLOR[tier]}1A; color:${TIER_COLOR[tier]};">T${tier}</span>` : "";
-      return `<div class="country-row"><span class="name">${tierBadge}${c}</span><span class="amt">${fmt(v)} · ${p.toFixed(1)}%</span></div>`;
-    }).join("");
-    box.innerHTML = `<div class="head" style="color:${REGION_COLOR[reg]}"><span class="dot" style="background:${REGION_COLOR[reg]}"></span>${reg}</div><div class="sub">합계 ${fmt(data.spend)}</div>${countryRows}`;
-    detailWrap.appendChild(box);
-  });
+  return total;
 }
 
-function renderAll(){
-  renderMonthFilter();
-  renderKpis();
-  renderBoxes();
-  renderRegions();
-  renderCountryPage();
-}
+function aggregateActuals(month){
+  const metaRoutineByCountry = sumByCountry(DATA.metaRoutine, "일", "국가", "지출 금액 (KRW)", month);
+  const tiktokRoutineByCountry = sumByCountry(DATA.tiktokRoutine, "일별", "국가/지역", "지출", month);
+  const beyondUsTotal = sumTotal(DATA.beyondUs, "일", "지출 금액 (KRW)", month);
+  const jpTiktokTotal = sumTotal(DATA.jpTiktok, "일별", "지출", month);
+  const googleTotal = sumTotal(DATA.google, "일", "비용", month);
+  const jpFollowTotal = sumTotal(DATA.jpFollow, "일", "지출 금액 (KRW)", month);
+  const jpSingleOneTotal = sumTotal(DATA.jpSingleOne, "date", "cost", month, JPY_TO_KRW_RATE);
+  const sparkAdsTotal = sumTotal(DATA.sparkAds, "일별", "지출", month);
+  const gmvTotal = sumTotal(DATA.gmvPdrn, "날짜", "Cost", month) + sumTotal(DATA.gmvAll, "날짜", "Cost", month);
+  const kbeautyTotal = sumTotal(DATA.kbeautyCandy, "일", "지출 금액 (KRW)", month);
 
-// ===== 국가별 서브페이지 (티어 테이블 + 추이 팝업) =====
-let countryRegionFilter = "전체";
-let countryTierFilter = "전체";
-let countryChannelFilter = "전체";
+  const usMeta = (metaRoutineByCountry["미국"]||0) + beyondUsTotal;
+  const jpMeta = metaRoutineByCountry["일본"]||0;
+  const usTiktok = tiktokRoutineByCountry["미국"]||0;
 
-function renderChannelFilter(){
-  const wrap = document.getElementById("channel-filter");
-  wrap.innerHTML = "";
-  ["전체","틱톡","메타","구글"].forEach(ch => {
-    const b = document.createElement("button");
-    b.className = "pill" + (countryChannelFilter===ch ? " active":"");
-    b.textContent = ch;
-    b.onclick = () => { countryChannelFilter = ch; renderCountryPage(); };
-    wrap.appendChild(b);
-  });
-}
-Chart.register(ChartDataLabels);
-
-function renderTierFilter(){
-  const wrap = document.getElementById("tier-filter");
-  wrap.innerHTML = "";
-  ["전체","T1","T2","T3"].forEach(t => {
-    const b = document.createElement("button");
-    b.className = "pill" + (countryTierFilter===t ? " active":"");
-    b.textContent = t;
-    b.onclick = () => { countryTierFilter = t; renderCountryPage(); };
-    wrap.appendChild(b);
-  });
-}
-
-function renderCountryRegionFilter(){
-  const regions = ["전체", ...Object.keys(REGION_COLOR)];
-  const wrap = document.getElementById("country-region-filter");
-  wrap.innerHTML = "";
-  regions.forEach(r => {
-    const b = document.createElement("button");
-    b.className = "pill" + (countryRegionFilter===r ? " active":"");
-    b.textContent = r;
-    b.onclick = () => { countryRegionFilter = r; renderCountryPage(); };
-    wrap.appendChild(b);
-  });
-}
-
-function renderMonthSelect(){
-  const sel = document.getElementById("month-select");
-  const months = monthList();
-  const prevVal = sel.value;
-  sel.innerHTML = `<option value="all">전체(기간 합산)</option>` + months.map(m => `<option value="${m}">${m}</option>`).join("");
-  if(prevVal && (prevVal==="all" || months.includes(prevVal))) sel.value = prevVal;
-  else sel.value = "all";
-  sel.onchange = renderTierTable;
-}
-
-function metricsFor(rows){
-  const spend = rows.reduce((a,b)=>a+b.spend,0);
-  const impr = rows.reduce((a,b)=>a+b.impr,0);
-  const clicks = rows.reduce((a,b)=>a+b.clicks,0);
   return {
-    spend, impr, clicks,
-    cpc: clicks? spend/clicks : null,
-    ctr: impr? clicks/impr*100 : null,
-    cpm: impr? spend/impr*1000 : null,
+    metaRoutineByCountry, tiktokRoutineByCountry,
+    usMeta, jpMeta, usTiktok, jpTiktokTotal, googleTotal,
+    jpFollowTotal, jpSingleOneTotal, sparkAdsTotal, gmvTotal, kbeautyTotal
   };
 }
 
-const TIER_STYLE = {
-  1: {bg:"var(--bg-warning)", label:"T1"},
-  2: {bg:"transparent", label:"T2", color:"var(--text-accent)"},
-  3: {bg:"var(--surface-1)", label:"T3"},
-};
-const METRIC_LABEL = {impr:"노출", clicks:"클릭", cpc:"CPC (원)", cpm:"CPM (원)", ctr:"CTR (%)"};
+/* ===================== 렌더 ===================== */
+function fmt(n){ return Math.round(n).toLocaleString("ko-KR"); }
+function pct(used, budget){ return budget>0 ? Math.round(used/budget*100) : 0; }
+function barColor(p){ return p>=100 ? "var(--redbar)" : p>=80 ? "var(--amberbar)" : "var(--greenbar)"; }
+function pctColor(p){ return p>=100 ? "var(--red)" : p>=80 ? "var(--amber)" : "var(--green)"; }
 
-function renderTierTable(){
-  const sel = document.getElementById("month-select");
-  const monthVal = sel.value;
-  let rows = monthVal === "all" ? ALL_ROWS : ALL_ROWS.filter(r => getMonthKey(r.date)===monthVal);
-  if(countryRegionFilter !== "전체") rows = rows.filter(r => regionOfRow(r)===countryRegionFilter);
-  if(countryChannelFilter !== "전체") rows = rows.filter(r => r.channel===countryChannelFilter);
-
-  const byCountry = {};
-  rows.forEach(r => {
-    byCountry[r.country] = byCountry[r.country] || [];
-    byCountry[r.country].push(r);
-  });
-
-  let entries = Object.entries(byCountry).map(([country, crows]) => ({
-    country, region: regionOfRow(crows[0]), tier: COUNTRY_TIER[country]||null, m: metricsFor(crows)
-  }));
-  if(countryTierFilter !== "전체"){
-    const t = parseInt(countryTierFilter.replace("T",""),10);
-    entries = entries.filter(e => e.tier===t);
-  }
-  entries.sort((a,b) => (a.tier||9)-(b.tier||9) || b.m.spend-a.m.spend);
-
-  const table = document.getElementById("tier-table");
-  table.innerHTML = `<tr><th>티어</th><th>권역</th><th>국가</th><th>노출</th><th>클릭</th><th>CPC</th><th>CPM</th><th>CTR</th></tr>`;
-  entries.forEach(e => {
-    const tierLabel = e.tier ? `<span class="tier-pill t${e.tier}">T${e.tier}</span>` : `<span style="color:var(--text-mute); font-size:11px;">–</span>`;
-    const tr = document.createElement("tr");
-    const cell = (metric, disp) => {
-      const td = document.createElement("td");
-      td.textContent = disp;
-      td.style.textAlign = "right"; td.style.color = "var(--accent)"; td.style.cursor = "pointer"; td.style.textDecoration = "underline"; td.style.textDecorationColor = "var(--border)";
-      td.onclick = () => openMetricModal(e.country, metric);
-      return td;
-    };
-    tr.innerHTML = `<td>${tierLabel}</td><td style="color:var(--text-sub);">${e.region}</td><td style="font-weight:600;">${e.country}</td>`;
-    tr.appendChild(cell("impr", fmt(e.m.impr)));
-    tr.appendChild(cell("clicks", fmt(e.m.clicks)));
-    tr.appendChild(cell("cpc", fmt(e.m.cpc)));
-    tr.appendChild(cell("cpm", fmt(e.m.cpm)));
-    tr.appendChild(cell("ctr", pct(e.m.ctr)));
-    table.appendChild(tr);
-  });
+function amtBarCell(budget, used){
+  const p = pct(used, budget);
+  return `<div class="amt">${fmt(budget)} / ${fmt(used)}</div>
+    <div class="bar-track"><div class="bar-fill" style="width:${Math.min(p,100)}%;background:${barColor(p)}"></div></div>`;
+}
+function naCell(label){
+  return `<div class="na">${label||"해당 없음"}</div><div class="bar-track"></div>`;
 }
 
-let modalChart = null;
-function openMetricModal(country, metric){
-  const data = [];
-  for(let m=1; m<=12; m++){
-    const key = `2026-${String(m).padStart(2,"0")}`;
-    let rows = ALL_ROWS.filter(r => r.country===country && getMonthKey(r.date)===key);
-    if(countryChannelFilter !== "전체") rows = rows.filter(r => r.channel===countryChannelFilter);
-    if(rows.length===0){ data.push(null); continue; }
-    const mm = metricsFor(rows);
-    data.push(mm[metric]);
-  }
-  const labels = data.map((_,i)=>`${i+1}월`);
-  const metricLabel = METRIC_LABEL[metric];
+function dayProgressText(month){
+  const now = new Date();
+  const [y,m] = month.split("-").map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const isCurrentMonth = (now.getFullYear()===y && (now.getMonth()+1)===m);
+  const elapsed = isCurrentMonth ? now.getDate() : daysInMonth;
+  return { elapsed, daysInMonth, text: `${m}월 ${elapsed}일째 / 총 ${daysInMonth}일` };
+}
 
-  const root = document.getElementById("modal-root");
-  root.innerHTML = `<div style="min-height:420px; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; border-radius:12px; position:fixed; inset:0; z-index:50;">
-    <div style="background:var(--card); border-radius:12px; padding:1.25rem; width:min(92%,600px);">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <p style="font-weight:600; font-size:14px; margin:0;">${country} · ${countryChannelFilter} · ${metricLabel} 추이 (1~12월)</p>
-        <button id="modal-close" aria-label="닫기" style="border:1px solid var(--border); background:var(--card); border-radius:8px; padding:4px 8px; cursor:pointer;">✕</button>
-      </div>
-      <div style="position:relative; height:240px;"><canvas id="modal-chart" role="img" aria-label="${country} ${metricLabel} 1월부터 12월까지 월별 추이"></canvas></div>
-    </div>
-  </div>`;
-  document.getElementById("modal-close").onclick = () => { root.innerHTML = ""; };
+function render(){
+  const month = SELECTED_MONTH;
+  const { buckets, special } = aggregateBudget(month);
+  const actuals = aggregateActuals(month);
+  const dp = dayProgressText(month);
+  document.getElementById("dayProgress").textContent = dp.text;
 
-  if(modalChart) modalChart.destroy();
-  modalChart = new Chart(document.getElementById("modal-chart"), {
-    type: "line",
-    data: { labels, datasets: [{ label: metricLabel, data, borderColor:"#2a78d6", backgroundColor:"rgba(42,120,214,0.1)", fill:true, tension:0.3, pointRadius:4, pointBackgroundColor:"#2a78d6", spanGaps:false }] },
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      layout:{ padding:{ top:24 } },
-      plugins:{
-        legend:{display:false},
-        datalabels:{ align:"top", anchor:"end", font:{size:10}, color:"#52514e",
-          formatter:(v)=> v===null || v===undefined ? "" : (metric==="ctr" ? v.toFixed(2)+"%" : fmt(v)) }
-      }
+  // 총예산/사용예산 계산
+  let totalBudget = 0, totalUsed = 0;
+  Object.values(buckets).forEach(v=> totalBudget += v);
+  totalBudget += special.gmv + special.sparkAds + special.singleOne + special.follow + special.kbeauty;
+
+  Object.keys(buckets).forEach(key=>{
+    const [country, media] = key.split("|");
+    let used = 0;
+    if(media==="메타"){
+      if(country==="미국") used = actuals.usMeta;
+      else if(country==="일본") used = actuals.jpMeta;
+      else used = actuals.metaRoutineByCountry[country]||0;
+    } else if(media==="틱톡"){
+      if(country==="미국") used = actuals.usTiktok;
+      else if(country==="일본") used = actuals.jpTiktokTotal;
+      else used = actuals.tiktokRoutineByCountry[country]||0;
+    } else if(media==="구글"){
+      used = country==="미국" ? actuals.googleTotal : 0;
+    }
+    totalUsed += used;
+  });
+  totalUsed += actuals.jpFollowTotal + actuals.jpSingleOneTotal + actuals.sparkAdsTotal + actuals.gmvTotal + actuals.kbeautyTotal;
+
+  const overallPct = pct(totalUsed, totalBudget);
+  const projected = dp.elapsed>0 ? Math.round(totalUsed/dp.elapsed*dp.daysInMonth/totalBudget*100) : 0;
+
+  // 상단 요약
+  document.getElementById("topSummary").innerHTML = `
+    <div class="card2"><div class="label">총 예산</div><div class="num">${fmt(totalBudget)}</div></div>
+    <div class="card2"><div class="label">사용 예산</div><div class="num">${fmt(totalUsed)}</div></div>
+    <div class="card2"><div class="label">소진율</div><div class="num" style="color:var(--accent)">${overallPct}%</div></div>
+    <div class="card2" style="background:#FAEEDA"><div class="label" style="color:var(--amber)">예상 월말 소진율</div><div class="num" style="color:var(--amber)">${projected}%</div></div>
+  `;
+
+  // 채널별 총예산 카드
+  let metaBudget=0, metaUsed=0, tiktokBudget=0, tiktokUsed=0, googleBudget=0, googleUsed=0;
+  Object.keys(buckets).forEach(key=>{
+    const [country, media] = key.split("|");
+    const b = buckets[key];
+    let used=0;
+    if(media==="메타"){
+      used = country==="미국"?actuals.usMeta:country==="일본"?actuals.jpMeta:(actuals.metaRoutineByCountry[country]||0);
+      metaBudget+=b; metaUsed+=used;
+    } else if(media==="틱톡"){
+      used = country==="미국"?actuals.usTiktok:country==="일본"?actuals.jpTiktokTotal:(actuals.tiktokRoutineByCountry[country]||0);
+      tiktokBudget+=b; tiktokUsed+=used;
+    } else if(media==="구글"){
+      used = country==="미국"?actuals.googleTotal:0;
+      googleBudget+=b; googleUsed+=used;
     }
   });
+  const otherBudget = special.sparkAds+special.gmv+special.singleOne+special.follow+special.kbeauty;
+  const otherUsed = actuals.sparkAdsTotal+actuals.gmvTotal+actuals.jpSingleOneTotal+actuals.jpFollowTotal+actuals.kbeautyTotal;
+
+  function channelCard(name, b, u){
+    return `<div class="card2"><div class="card-title">${name}</div>
+      <div class="label">총예산</div><div style="font-size:15px">${fmt(b)}</div>
+      <div class="label" style="margin-top:4px">사용예산</div><div style="font-size:15px">${fmt(u)}</div></div>`;
+  }
+  document.getElementById("channelCards").innerHTML =
+    channelCard("메타", metaBudget, metaUsed) +
+    channelCard("틱톡", tiktokBudget, tiktokUsed) +
+    channelCard("구글", googleBudget, googleUsed) +
+    channelCard("기타", otherBudget, otherUsed);
+
+  // 국가별 예산 비중
+  const countryTotals = {};
+  Object.keys(buckets).forEach(key=>{
+    const [country] = key.split("|");
+    countryTotals[country] = (countryTotals[country]||0) + buckets[key];
+  });
+  const sortedCountries = Object.entries(countryTotals).sort((a,b)=>b[1]-a[1]);
+  const grandTotal = sortedCountries.reduce((s,[,v])=>s+v,0);
+  document.getElementById("countryShareCard").innerHTML = `<div class="country-grid">` +
+    sortedCountries.map(([c,v])=>{
+      const p = grandTotal>0 ? Math.round(v/grandTotal*100) : 0;
+      return `<div class="country-row"><span>${c}</span><span style="color:var(--muted)">${p}% · ${fmt(v)}</span></div>`;
+    }).join("") + `</div>`;
+
+  // 루틴 테이블
+  const tierRows = {1:[],2:[],3:[]};
+  Object.keys(COUNTRY_TIER).forEach(country=>{
+    const metaB = buckets[country+"|메타"]||0;
+    const tiktokB = buckets[country+"|틱톡"]||0;
+    if(metaB===0 && tiktokB===0) return;
+    const metaU = actuals.metaRoutineByCountry[country]||0;
+    const tiktokU = actuals.tiktokRoutineByCountry[country]||0;
+    const totalB = metaB+tiktokB, totalU = metaU+tiktokU;
+    const curPct = pct(totalU, totalB);
+    const projPct = dp.elapsed>0 ? Math.round(totalU/dp.elapsed*dp.daysInMonth/totalB*100) : 0;
+    tierRows[COUNTRY_TIER[country]].push({country, metaB, metaU, tiktokB, tiktokU, curPct, projPct});
+  });
+  let routineHtml = "";
+  [1,2,3].forEach(tier=>{
+    if(tierRows[tier].length===0) return;
+    routineHtml += `<tr class="tier-row"><td colspan="5">Tier ${tier}</td></tr>`;
+    tierRows[tier].forEach(r=>{
+      routineHtml += `<tr class="datarow">
+        <td>${r.country}</td>
+        <td>${amtBarCell(r.metaB, r.metaU)}</td>
+        <td>${amtBarCell(r.tiktokB, r.tiktokU)}</td>
+        <td class="pct-r">${r.curPct}%</td>
+        <td class="pct-r" style="color:${pctColor(r.projPct)}">${r.projPct}%</td>
+      </tr>`;
+    });
+  });
+  document.getElementById("routineTable").innerHTML = routineHtml || `<tr><td colspan="5" class="muted">해당 월 루틴 예산 데이터 없음</td></tr>`;
+
+  // 미국·일본 테이블
+  const usMetaB = buckets["미국|메타"]||0, jpMetaB = buckets["일본|메타"]||0;
+  const usTiktokB = buckets["미국|틱톡"]||0, jpTiktokB = buckets["일본|틱톡"]||0;
+  const usGoogleB = buckets["미국|구글"]||0;
+  document.getElementById("usJpTable").innerHTML = `
+    <tr class="datarow">
+      <td>미국</td>
+      <td>${amtBarCell(usMetaB, actuals.usMeta)}</td>
+      <td>${amtBarCell(usTiktokB, actuals.usTiktok)}</td>
+      <td>${amtBarCell(usGoogleB, actuals.googleTotal)}</td>
+      <td>${naCell()}</td>
+      <td>${naCell()}</td>
+    </tr>
+    <tr class="datarow">
+      <td>일본</td>
+      <td>${amtBarCell(jpMetaB, actuals.jpMeta)}</td>
+      <td>${amtBarCell(jpTiktokB, actuals.jpTiktokTotal)}</td>
+      <td>${naCell()}</td>
+      <td>${amtBarCell(special.follow, actuals.jpFollowTotal)}</td>
+      <td>${amtBarCell(special.singleOne, actuals.jpSingleOneTotal)}</td>
+    </tr>
+  `;
+
+  // 개별 운영 항목
+  function standaloneCard(name, b, u){
+    const p = pct(u,b);
+    return `<div class="card2"><div class="card-title">${name}</div>
+      <div class="label">예산</div><div style="font-size:14px">${fmt(b)}</div>
+      <div class="label" style="margin-top:4px">소진</div><div style="font-size:14px">${fmt(u)}</div>
+      <div class="bar-track" style="margin-top:8px"><div class="bar-fill" style="width:${Math.min(p,100)}%;background:${barColor(p)}"></div></div>
+      </div>`;
+  }
+  document.getElementById("standaloneCards").innerHTML =
+    standaloneCard("스파크애즈", special.sparkAds, actuals.sparkAdsTotal) +
+    standaloneCard("틱톡 GMV", special.gmv, actuals.gmvTotal) +
+    standaloneCard("K뷰티캔디", special.kbeauty, actuals.kbeautyTotal);
+
+  // 소진 알림 (단순 규칙: 전체 소진율 기준 상위 과속/저속 항목 표시)
+  const allItems = [];
+  tierRows[1].concat(tierRows[2]).concat(tierRows[3]).forEach(r=>{
+    if(r.metaB>0) allItems.push({label:`${r.country} 메타`, pct: pct(r.metaU,r.metaB)});
+    if(r.tiktokB>0) allItems.push({label:`${r.country} 틱톡`, pct: pct(r.tiktokU,r.tiktokB)});
+  });
+  allItems.push({label:"스파크애즈", pct: pct(actuals.sparkAdsTotal, special.sparkAds)});
+  allItems.push({label:"GMV", pct: pct(actuals.gmvTotal, special.gmv)});
+  allItems.push({label:"K뷰티캔디", pct: pct(actuals.kbeautyTotal, special.kbeauty)});
+  const overPacing = allItems.filter(i=>i.pct>=100).sort((a,b)=>b.pct-a.pct).slice(0,1);
+  const nearLimit = allItems.filter(i=>i.pct>=80 && i.pct<100).sort((a,b)=>b.pct-a.pct).slice(0,1);
+  const underPacing = allItems.filter(i=>i.pct>0 && i.pct<40).sort((a,b)=>a.pct-b.pct).slice(0,1);
+  let alertsHtml = "";
+  overPacing.forEach(i=> alertsHtml += `<div class="alert alert-danger">${i.label} ${i.pct}% 초과</div>`);
+  nearLimit.forEach(i=> alertsHtml += `<div class="alert alert-warning">${i.label} ${i.pct}% · 소진 임박</div>`);
+  underPacing.forEach(i=> alertsHtml += `<div class="alert alert-muted">${i.label} ${i.pct}% · 소진 저조</div>`);
+  document.getElementById("alerts").innerHTML = alertsHtml || `<div class="alert alert-muted">특이사항 없음</div>`;
 }
 
-function renderCountryPage(){
-  renderChannelFilter();
-  renderTierFilter();
-  renderCountryRegionFilter();
-  renderMonthSelect();
-  renderTierTable();
-}
-
-// ===== 페이지 전환 =====
-document.getElementById("goto-country").onclick = () => {
-  document.getElementById("page-main").classList.remove("active");
-  document.getElementById("page-country").classList.add("active");
-};
-document.getElementById("back-to-main").onclick = () => {
-  document.getElementById("page-country").classList.remove("active");
-  document.getElementById("page-main").classList.add("active");
-};
-document.getElementById("refresh-btn").onclick = () => loadAll(true);
-
-loadAll(false);
+init();
 </script>
 </body>
 </html>
