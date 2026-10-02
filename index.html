@@ -7,18 +7,19 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   :root{
-    --bg:#F7F6F2; --card:#FFFFFF; --card2:#F1EFE8;
-    --border:#E4E1D8; --text:#222; --muted:#8A8880;
-    --green:#3B6D11; --amber:#854F0B; --red:#791F1F;
-    --greenbar:#639922; --amberbar:#BA7517; --redbar:#E24B4A;
-    --accent:#185FA5;
+    --bg:#FBF4F3; --card:#FFFFFF; --card2:#F6DEDB;
+    --border:#F0DAD6; --text:#3A2321; --muted:#A47D78;
+    --accent:#C9664F; --accent-dark:#8C3A2D;
+    --green-bg:#E3EEDC; --green-text:#2F5A1E;
+    --amber-bg:#FBE9D2; --amber-text:#8A5A12;
+    --red-bg:#F8D9D3; --red-text:#8C2A1C;
   }
   *{box-sizing:border-box;}
   body{font-family:"Malgun Gothic","맑은 고딕",sans-serif;background:var(--bg);color:var(--text);margin:0;padding:24px;}
   .wrap{max-width:1180px;margin:0 auto;}
-  h1{font-size:20px;font-weight:700;margin:0 0 16px;}
+  h1{font-size:20px;font-weight:700;margin:0 0 16px;color:var(--text);}
   .topbar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
-  select{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:13px;}
+  select{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:13px;color:var(--text);}
   .muted{color:var(--muted);font-size:12px;}
   .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:20px;}
   .card2{background:var(--card2);border-radius:8px;padding:14px;}
@@ -26,26 +27,25 @@
   .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
   .label{font-size:12px;color:var(--muted);margin-bottom:4px;}
   .num{font-size:22px;font-weight:700;}
-  .section-title{font-size:14px;font-weight:700;margin:24px 0 8px;}
+  .section-title{font-size:14px;font-weight:700;margin:24px 0 8px;color:var(--text);}
   .section-title:first-child{margin-top:0;}
   table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
   td{padding:5px 0;vertical-align:top;}
   thead td{color:var(--muted);font-size:12px;padding-bottom:6px;}
   .tier-row td{padding-top:10px;padding-bottom:4px;color:var(--text);font-weight:700;border-top:1px solid var(--border);}
   tr.datarow td{border-top:none;}
-  .bar-track{height:5px;background:var(--card2);border-radius:4px;margin-top:3px;}
-  .bar-fill{height:5px;border-radius:4px;}
-  .amt{font-size:12px;}
+  .amt{font-size:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .chip{font-size:11px;padding:1px 7px;border-radius:10px;font-weight:700;white-space:nowrap;}
   .na{font-size:12px;color:var(--muted);}
   .pct-r{text-align:right;font-weight:700;}
   .country-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0 20px;font-size:12px;}
   .country-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);}
   .alert{border-radius:8px;padding:10px 12px;font-size:12px;}
-  .alert-danger{background:#FCEBEB;color:#791F1F;}
-  .alert-warning{background:#FAEEDA;color:#854F0B;}
-  .alert-muted{background:var(--card2);color:var(--muted);}
+  .alert-danger{background:var(--red-bg);color:var(--red-text);}
+  .alert-warning{background:var(--amber-bg);color:var(--amber-text);}
+  .alert-muted{background:var(--card2);color:var(--accent-dark);}
   .card-title{font-size:13px;font-weight:700;margin-bottom:6px;}
-  #error-banner{display:none;background:#FCEBEB;color:#791F1F;border:1px solid #F0997B;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;}
+  #error-banner{display:none;background:var(--red-bg);color:var(--red-text);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;}
   .footnote{font-size:11px;color:var(--muted);margin-top:8px;}
 </style>
 </head>
@@ -104,7 +104,7 @@
 <script>
 /* ===================== 설정 ===================== */
 const SPREADSHEET_ID = "1-gZrBKjTlxhc6VCJWsFDjM6epwaGvGP5q81Dadx8SP8";
-const JPY_TO_KRW_RATE = 9.2; // 고정환율: 1엔 = 9.2원 (실제 값으로 교체 필요)
+const JPY_TO_KRW_RATE = 8.2; // 고정환율: 1엔 = 8.2원 (실제 값으로 교체 필요)
 
 const SHEETS = {
   budget: "월예산Budget",
@@ -293,16 +293,20 @@ function aggregateActuals(month){
 /* ===================== 렌더 ===================== */
 function fmt(n){ return Math.round(n).toLocaleString("ko-KR"); }
 function pct(used, budget){ return budget>0 ? Math.round(used/budget*100) : 0; }
-function barColor(p){ return p>=100 ? "var(--redbar)" : p>=80 ? "var(--amberbar)" : "var(--greenbar)"; }
-function pctColor(p){ return p>=100 ? "var(--red)" : p>=80 ? "var(--amber)" : "var(--green)"; }
+function chipColors(p){
+  if(p>=100) return {bg:"var(--red-bg)", text:"var(--red-text)"};
+  if(p>=80) return {bg:"var(--amber-bg)", text:"var(--amber-text)"};
+  return {bg:"var(--green-bg)", text:"var(--green-text)"};
+}
+function pctColor(p){ return chipColors(p).text; }
 
 function amtBarCell(budget, used){
   const p = pct(used, budget);
-  return `<div class="amt">${fmt(budget)} / ${fmt(used)}</div>
-    <div class="bar-track"><div class="bar-fill" style="width:${Math.min(p,100)}%;background:${barColor(p)}"></div></div>`;
+  const c = chipColors(p);
+  return `<div class="amt">${fmt(budget)} / ${fmt(used)} <span class="chip" style="background:${c.bg};color:${c.text}">${p}%</span></div>`;
 }
 function naCell(label){
-  return `<div class="na">${label||"해당 없음"}</div><div class="bar-track"></div>`;
+  return `<div class="na">${label||"해당 없음"}</div>`;
 }
 
 function dayProgressText(month){
@@ -348,11 +352,12 @@ function render(){
   const projected = dp.elapsed>0 ? Math.round(totalUsed/dp.elapsed*dp.daysInMonth/totalBudget*100) : 0;
 
   // 상단 요약
+  const projChip = chipColors(projected);
   document.getElementById("topSummary").innerHTML = `
     <div class="card2"><div class="label">총 예산</div><div class="num">${fmt(totalBudget)}</div></div>
     <div class="card2"><div class="label">사용 예산</div><div class="num">${fmt(totalUsed)}</div></div>
-    <div class="card2"><div class="label">소진율</div><div class="num" style="color:var(--accent)">${overallPct}%</div></div>
-    <div class="card2" style="background:#FAEEDA"><div class="label" style="color:var(--amber)">예상 월말 소진율</div><div class="num" style="color:var(--amber)">${projected}%</div></div>
+    <div class="card2"><div class="label">소진율</div><div class="num" style="color:var(--accent-dark)">${overallPct}%</div></div>
+    <div class="card2" style="background:${projChip.bg}"><div class="label" style="color:${projChip.text}">예상 월말 소진율</div><div class="num" style="color:${projChip.text}">${projected}%</div></div>
   `;
 
   // 채널별 총예산 카드
@@ -376,9 +381,11 @@ function render(){
   const otherUsed = actuals.sparkAdsTotal+actuals.gmvTotal+actuals.jpSingleOneTotal+actuals.jpFollowTotal+actuals.kbeautyTotal;
 
   function channelCard(name, b, u){
+    const p = pct(u,b), c = chipColors(p);
     return `<div class="card2"><div class="card-title">${name}</div>
       <div class="label">총예산</div><div style="font-size:15px">${fmt(b)}</div>
-      <div class="label" style="margin-top:4px">사용예산</div><div style="font-size:15px">${fmt(u)}</div></div>`;
+      <div class="label" style="margin-top:4px">사용예산</div>
+      <div style="font-size:15px;display:flex;align-items:center;gap:6px;">${fmt(u)} <span class="chip" style="background:${c.bg};color:${c.text}">${p}%</span></div></div>`;
   }
   document.getElementById("channelCards").innerHTML =
     channelCard("메타", metaBudget, metaUsed) +
@@ -454,12 +461,11 @@ function render(){
 
   // 개별 운영 항목
   function standaloneCard(name, b, u){
-    const p = pct(u,b);
+    const p = pct(u,b), c = chipColors(p);
     return `<div class="card2"><div class="card-title">${name}</div>
       <div class="label">예산</div><div style="font-size:14px">${fmt(b)}</div>
-      <div class="label" style="margin-top:4px">소진</div><div style="font-size:14px">${fmt(u)}</div>
-      <div class="bar-track" style="margin-top:8px"><div class="bar-fill" style="width:${Math.min(p,100)}%;background:${barColor(p)}"></div></div>
-      </div>`;
+      <div class="label" style="margin-top:4px">소진</div>
+      <div style="font-size:14px;display:flex;align-items:center;gap:6px;">${fmt(u)} <span class="chip" style="background:${c.bg};color:${c.text}">${p}%</span></div></div>`;
   }
   document.getElementById("standaloneCards").innerHTML =
     standaloneCard("스파크애즈", special.sparkAds, actuals.sparkAdsTotal) +
