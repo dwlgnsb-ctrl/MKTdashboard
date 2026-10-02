@@ -7,8 +7,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   :root{
-    --bg:#F2F2F6; --card:#FFFFFF; --card2:#F7F7FA;
-    --border:#E6E6EC; --text:#232330; --label:#5B5C6B; --muted:#9A9AA8;
+    --bg:#F2F2F6; --card:#FFFFFF; --card2:#EFEFF6;
+    --border:#DCDCE6; --text:#232330; --label:#5B5C6B; --muted:#9A9AA8;
     --accent:#FF7FA0; --accent-dark:#D6436A; --accent-soft:#FFE8EE;
     --green-bg:#E3F7E9; --green-text:#2FA360;
     --amber-bg:#FFF3DC; --amber-text:#D98A1D;
@@ -23,7 +23,7 @@
   select{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card);font-size:13px;color:var(--text);box-shadow:var(--shadow);}
   .muted{color:var(--muted);font-size:12px;}
   .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:20px;box-shadow:var(--shadow);}
-  .card2{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:var(--shadow);}
+  .card2{background:var(--card2);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:14px;}
   .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
   .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
   .label{font-size:12px;color:var(--label);margin-bottom:4px;}
@@ -105,7 +105,7 @@
 <script>
 /* ===================== 설정 ===================== */
 const SPREADSHEET_ID = "1-gZrBKjTlxhc6VCJWsFDjM6epwaGvGP5q81Dadx8SP8";
-const JPY_TO_KRW_RATE = 8.2; // 고정환율: 1엔 = 8.2원 (실제 값으로 교체 필요)
+const JPY_TO_KRW_RATE = 8.2; // 고정환율: 1엔 = 8.2원
 
 const SHEETS = {
   budget: "월예산Budget",
