@@ -9,7 +9,7 @@
   :root{
     --bg:#FFFFFF; --card:#FFFFFF; --card2:#FFFFFF;
     --border:#E2E2EA; --text:#232330; --label:#5B5C6B; --muted:#9A9AA8;
-    --accent:#FF7FA0; --accent-dark:#D6436A; --accent-soft:#FFE8EE;
+    --accent:#1E3A5F; --accent-dark:#15283F; --accent-soft:#EAF0F6;
     --green-bg:#E3F7E9; --green-text:#2FA360;
     --amber-bg:#FFF3DC; --amber-text:#D98A1D;
     --red-bg:#FFE3E6; --red-text:#E0575A;
@@ -20,10 +20,11 @@
   .wrap{max-width:1180px;margin:0 auto;}
   h1{font-size:20px;font-weight:700;margin:0 0 16px;color:var(--text);}
   .topbar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
-  select{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card);font-size:13px;color:var(--text);box-shadow:var(--shadow);}
+  select{appearance:none;-webkit-appearance:none;-moz-appearance:none;padding:9px 34px 9px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%235B5C6B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>') no-repeat right 12px center;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;min-width:140px;}
+  select:focus{outline:none;border-color:var(--accent);}
   .muted{color:var(--muted);font-size:12px;}
   .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:20px;box-shadow:var(--shadow);}
-  .card2{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;padding:14px;}
+  .card2{background:var(--card);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:8px 8px 0 0;padding:14px;}
   .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
   .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
   .label{font-size:12px;color:var(--label);margin-bottom:4px;}
@@ -357,8 +358,8 @@ function render(){
   document.getElementById("topSummary").innerHTML = `
     <div class="card2"><div class="label">총 예산</div><div class="num">${fmt(totalBudget)}</div></div>
     <div class="card2"><div class="label">사용 예산</div><div class="num">${fmt(totalUsed)}</div></div>
-    <div class="card2" style="background:var(--accent-soft);border-color:var(--accent-soft)"><div class="label" style="color:var(--accent-dark)">소진율</div><div class="num" style="color:var(--accent-dark)">${overallPct}%</div></div>
-    <div class="card2" style="background:${projChip.bg};border-color:${projChip.bg}"><div class="label" style="color:${projChip.text}">예상 월말 소진율</div><div class="num" style="color:${projChip.text}">${projected}%</div></div>
+    <div class="card2" style="background:var(--accent);border:1px solid var(--accent)"><div class="label" style="color:#AFC2D8">소진율</div><div class="num" style="color:#FFFFFF">${overallPct}%</div></div>
+    <div class="card2" style="border-top-color:${projChip.text}"><div class="label" style="color:${projChip.text}">예상 월말 소진율</div><div class="num" style="color:${projChip.text}">${projected}%</div></div>
   `;
 
   // 채널별 총예산 카드
