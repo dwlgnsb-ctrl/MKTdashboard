@@ -62,7 +62,7 @@
   </div>
 
   <div class="card">
-    <div class="grid4" id="topSummary"></div>
+    <div class="grid3" id="topSummary"></div>
   </div>
 
   <div class="section-title">채널별 총예산</div>
@@ -77,7 +77,7 @@
   <div class="section-title">루틴 (국가 티어)</div>
   <div class="card">
     <table>
-      <thead><tr><td style="width:18%">국가</td><td style="width:24%">메타 예산/소진</td><td style="width:24%">틱톡 예산/소진</td><td style="width:17%" class="pct-r">현재 소진율</td><td style="width:17%" class="pct-r">예상 월말</td></tr></thead>
+      <thead><tr><td style="width:22%">국가</td><td style="width:30%">메타 예산/소진</td><td style="width:30%">틱톡 예산/소진</td><td style="width:18%" class="pct-r">현재 소진율</td></tr></thead>
       <tbody id="routineTable"></tbody>
     </table>
     <div class="footnote">메타루틴 / 틱톡루틴 raw 기준, 미국·일본 제외 전체 티어 국가</div>
@@ -351,15 +351,12 @@ function render(){
   totalUsed += actuals.jpFollowTotal + actuals.jpSingleOneTotal + actuals.sparkAdsTotal + actuals.gmvTotal + actuals.kbeautyTotal;
 
   const overallPct = pct(totalUsed, totalBudget);
-  const projected = dp.elapsed>0 ? Math.round(totalUsed/dp.elapsed*dp.daysInMonth/totalBudget*100) : 0;
 
   // 상단 요약
-  const projChip = chipColors(projected);
   document.getElementById("topSummary").innerHTML = `
     <div class="card2"><div class="label">총 예산</div><div class="num">${fmt(totalBudget)}</div></div>
     <div class="card2"><div class="label">사용 예산</div><div class="num">${fmt(totalUsed)}</div></div>
     <div class="card2" style="background:var(--accent);border:1px solid var(--accent)"><div class="label" style="color:#AFC2D8">소진율</div><div class="num" style="color:#FFFFFF">${overallPct}%</div></div>
-    <div class="card2" style="border-top-color:${projChip.text}"><div class="label" style="color:${projChip.text}">예상 월말 소진율</div><div class="num" style="color:${projChip.text}">${projected}%</div></div>
   `;
 
   // 채널별 총예산 카드
@@ -419,24 +416,22 @@ function render(){
     const tiktokU = actuals.tiktokRoutineByCountry[country]||0;
     const totalB = metaB+tiktokB, totalU = metaU+tiktokU;
     const curPct = pct(totalU, totalB);
-    const projPct = dp.elapsed>0 ? Math.round(totalU/dp.elapsed*dp.daysInMonth/totalB*100) : 0;
-    tierRows[COUNTRY_TIER[country]].push({country, metaB, metaU, tiktokB, tiktokU, curPct, projPct});
+    tierRows[COUNTRY_TIER[country]].push({country, metaB, metaU, tiktokB, tiktokU, curPct});
   });
   let routineHtml = "";
   [1,2,3].forEach(tier=>{
     if(tierRows[tier].length===0) return;
-    routineHtml += `<tr class="tier-row"><td colspan="5">Tier ${tier}</td></tr>`;
+    routineHtml += `<tr class="tier-row"><td colspan="4">Tier ${tier}</td></tr>`;
     tierRows[tier].forEach(r=>{
       routineHtml += `<tr class="datarow">
         <td>${r.country}</td>
         <td>${amtBarCell(r.metaB, r.metaU)}</td>
         <td>${amtBarCell(r.tiktokB, r.tiktokU)}</td>
-        <td class="pct-r">${r.curPct}%</td>
-        <td class="pct-r" style="color:${pctColor(r.projPct)}">${r.projPct}%</td>
+        <td class="pct-r" style="color:${pctColor(r.curPct)}">${r.curPct}%</td>
       </tr>`;
     });
   });
-  document.getElementById("routineTable").innerHTML = routineHtml || `<tr><td colspan="5" class="muted">해당 월 루틴 예산 데이터 없음</td></tr>`;
+  document.getElementById("routineTable").innerHTML = routineHtml || `<tr><td colspan="4" class="muted">해당 월 루틴 예산 데이터 없음</td></tr>`;
 
   // 미국·일본 테이블
   const usMetaB = buckets["미국|메타"]||0, jpMetaB = buckets["일본|메타"]||0;
