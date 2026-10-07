@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mary&May 마케팅 예산 대시보드</title>
+<title>Mary&May 마케팅 대시보드</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   :root{
@@ -49,18 +49,80 @@
   .card-title{font-size:13px;font-weight:700;margin-bottom:6px;}
   #error-banner{display:none;background:var(--red-bg);color:var(--red-text);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;}
   .footnote{font-size:11px;color:var(--muted);margin-top:8px;}
+
+  /* ===== 트래픽 효율 현황 ===== */
+  .tf-nav{display:flex;gap:24px;border-bottom:1px solid var(--border);margin-bottom:14px;}
+  .tf-nav button{background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;padding:9px 2px;font-size:14px;font-family:inherit;color:var(--label);cursor:pointer;}
+  .tf-nav button.on{color:var(--accent);font-weight:700;border-bottom-color:var(--accent);}
+  .tf-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+  .tf-seg{display:inline-flex;}
+  .tf-tab{padding:7px 16px;cursor:pointer;border:1px solid var(--border);color:var(--label);background:var(--card);font-size:13px;}
+  .tf-tab.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .tf-seg .tf-tab:first-child{border-radius:8px 0 0 8px;}
+  .tf-seg .tf-tab:last-child{border-radius:0 8px 8px 0;}
+  .tf-chip{border:1px solid var(--border);border-radius:999px;padding:4px 13px;font-size:12px;cursor:pointer;background:var(--card);color:var(--label);}
+  .tf-chip.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .tf-g{color:#227A4C;} .tf-b{color:#A32D2D;} .tf-z{color:var(--label);}
+  .tf-sub{font-size:11px;color:var(--label);}
+  .tf-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:6px;}
+  .tf-kpi .tf-kv{font-size:22px;font-weight:700;margin:2px 0;}
+  .tf-kpi .tf-kd{font-size:12px;}
+  #tfStage{position:relative;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--card);max-width:900px;margin:0 auto;}
+  #tfMap path{cursor:pointer;vector-effect:non-scaling-stroke;}
+  #tfTip{position:absolute;pointer-events:none;display:none;background:var(--accent);color:#fff;border-radius:6px;padding:4px 8px;font-size:11px;white-space:nowrap;z-index:5;}
+  .tf-ov{position:absolute;top:8px;right:8px;width:47%;max-height:calc(100% - 16px);overflow-y:auto;background:var(--card);border:1px solid #CFCFDA;border-radius:8px;padding:10px;opacity:0;visibility:hidden;transition:opacity .25s;z-index:4;}
+  .tf-ov.show{opacity:1;visibility:visible;}
+  .tf-oh{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;}
+  .tf-oh b{font-size:15px;}
+  .tf-tc{display:inline-block;font-size:10px;padding:1px 7px;border-radius:999px;background:#F1F1F6;color:var(--label);margin-left:6px;vertical-align:1px;font-weight:400;}
+  .tf-x{cursor:pointer;color:var(--muted);font-size:12px;padding:0 4px;}
+  .tf-chc{border-left:3px solid var(--accent);padding:5px 9px;margin-top:6px;background:#F6F7FA;border-radius:0 6px 6px 0;}
+  .tf-chc.cv{border-left-color:#BA7517;}
+  .tf-chh{display:flex;justify-content:space-between;font-size:12px;font-weight:700;}
+  .tf-chh span+span{font-weight:400;color:var(--label);}
+  .tf-pb{height:4px;background:#E2E2EA;border-radius:2px;margin:3px 0;overflow:hidden;}
+  .tf-pb i{display:block;height:100%;background:var(--accent);}
+  .tf-ln{font-size:11px;line-height:1.6;}
+  .tf-ln s{text-decoration:none;color:var(--label);}
+  .tf-lg{display:flex;gap:14px;font-size:11px;color:var(--label);margin-top:8px;align-items:center;flex-wrap:wrap;}
+  .tf-sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;}
+  .tf-rk{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,auto);grid-template-columns:repeat(3,1fr);gap:0 22px;margin-top:8px;}
+  .tf-li{padding:6px 6px 5px;border-bottom:1px solid var(--border);cursor:pointer;border-radius:6px;}
+  .tf-li:hover{background:#F6F7FA;}
+  .tf-li.on{background:#FBE9E9;}
+  .tf-li .a{display:grid;grid-template-columns:18px 1fr auto;gap:6px;align-items:baseline;font-size:13px;}
+  .tf-li .c{padding-left:24px;font-size:11px;}
+  .tf-bar2{height:4px;border-radius:2px;background:var(--accent);margin:3px 0 1px 24px;}
+  table.tf-wk{width:100%;border-collapse:separate;border-spacing:0 3px;table-layout:fixed;font-size:12px;}
+  .tf-wk th{font-weight:700;font-size:11px;color:var(--label);padding:4px 3px;text-align:center;}
+  .tf-wk th small{display:block;font-weight:400;color:var(--muted);}
+  .tf-wk td{padding:5px 3px;line-height:1.35;text-align:center;vertical-align:middle;}
+  .tf-wk td.tf-cell{border:1px solid var(--border);border-radius:5px;}
+  .tf-wk td.tf-n{text-align:left;font-weight:700;font-size:12px;padding-left:4px;width:15%;}
+  .tf-wk tr.tf-tr td{background:#F1F1F6;font-size:11px;font-weight:700;text-align:left;border-radius:4px;padding:3px 8px;}
+  .tf-wk .tf-v{font-weight:700;font-size:13px;}
+  .tf-wk .tf-dl{font-size:11px;}
+  .tf-wk .tf-sm .tf-v{color:var(--muted);}
+  .tf-wk .tf-na{color:var(--muted);}
+  .tf-ing{font-size:10px;color:#BA7517;font-weight:700;}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Mary&May 마케팅 예산 대시보드</h1>
+  <h1>Mary&May 마케팅 대시보드</h1>
   <div id="error-banner"></div>
+
+  <div class="tf-nav">
+    <button id="navBudget" class="on" onclick="showPage('budget')">예산·소진</button>
+    <button id="navTraffic" onclick="showPage('traffic')">트래픽 효율 현황</button>
+  </div>
 
   <div class="topbar">
     <select id="monthSelect"></select>
     <span class="muted" id="dayProgress"></span>
   </div>
 
+  <div id="page-budget">
   <div class="card">
     <div class="grid3" id="topSummary"></div>
   </div>
@@ -101,6 +163,42 @@
 
   <div class="section-title">개별 운영 항목</div>
   <div class="card"><div class="grid3" id="standaloneCards"></div></div>
+  </div>
+
+  <div id="page-traffic" style="display:none">
+    <div class="tf-bar">
+      <div class="tf-seg" id="tfCmp"></div>
+      <div style="flex:1"></div>
+      <div class="tf-seg" id="tfCh"></div>
+    </div>
+    <div class="muted" id="tfBasis"></div>
+
+    <div class="tf-kpis" id="tfKpi" style="margin-top:12px"></div>
+
+    <div class="section-title">국가별 분포</div>
+    <div class="card">
+      <div class="tf-bar" style="margin-bottom:8px">
+        <span class="card-title" style="margin:0">국가별 분포</span>
+        <span class="tf-sub">국가에 마우스를 올리면 확대 · 클릭하면 고정(✕로 닫기)</span>
+      </div>
+      <div id="tfStage">
+        <svg id="tfMap" viewBox="0 0 640 400" style="width:100%;display:block"><rect id="tfBg" width="640" height="400" fill="transparent"/><g id="tfZg"></g></svg>
+        <div id="tfOv" class="tf-ov"></div><div id="tfTip"></div>
+      </div>
+      <div class="tf-lg"><span><span class="tf-sw" style="background:#6F8DB3"></span>운영 국가</span><span><span class="tf-sw" style="background:#D64545"></span>선택한 국가</span><span><span class="tf-sw" style="background:#EEF0F4;border:1px solid #CFCFDA"></span>미운영</span><span id="tfMapNote"></span></div>
+      <div class="tf-bar" style="margin:16px 0 0"><span class="card-title" style="margin:0">국가 목록</span><div id="tfMm" style="display:flex;gap:6px"></div><span class="tf-sub">번호는 티어 순서 · * 표본 적음 · 클릭하면 지도 확대</span></div>
+      <div class="tf-rk" id="tfRk"></div>
+    </div>
+
+    <div class="section-title">국가별 주차 추이</div>
+    <div class="card">
+      <div class="tf-bar"><span class="card-title" style="margin:0">국가별 주차 추이</span><div class="tf-seg" id="tfCh2"></div></div>
+      <div class="tf-bar"><span class="tf-sub">지표</span><div id="tfWm" style="display:flex;gap:6px"></div><span class="tf-sub" id="tfWmDesc"></span></div>
+      <table class="tf-wk" id="tfWk"></table>
+      <div class="footnote">1~7 / 8~14 / 15~21 / 22~말일 · 주차 증감은 직전 주 대비 · 월 전체는 전월 대비 · 진행 중인 주는 "집계 중" · * 표본 적음(하루 평균 클릭 약 670회 미만 = 월 2만 기준, 회색)</div>
+    </div>
+    <div class="footnote" id="tfNote"></div>
+  </div>
 </div>
 
 <script>
@@ -216,9 +314,11 @@ async function init(){
   });
   SELECTED_MONTH = months[months.length-1];
   sel.value = SELECTED_MONTH;
-  sel.addEventListener("change", ()=>{ SELECTED_MONTH = sel.value; render(); });
+  sel.addEventListener("change", ()=>{ SELECTED_MONTH = sel.value; render(); tfRenderAll(); });
 
   render();
+  tfBuild();
+  tfRenderAll();
 }
 
 /* 예산 집계: 국가/매체별 버킷 + 특수 항목 분리 */
@@ -486,6 +586,391 @@ function render(){
   nearLimit.forEach(i=> alertsHtml += `<div class="alert alert-warning">${i.label} ${i.pct}% · 소진 임박</div>`);
   underPacing.forEach(i=> alertsHtml += `<div class="alert alert-muted">${i.label} ${i.pct}% · 소진 저조</div>`);
   document.getElementById("alerts").innerHTML = alertsHtml || `<div class="alert alert-muted">특이사항 없음</div>`;
+}
+
+/* ===================== 트래픽 효율 현황 ===================== */
+const TF_SAMPLE_CLICKS_PER_DAY = 20000/30; // 표본 적음 기준: 월 2만 클릭 = 하루 평균 약 670회
+const TF_COUNTRIES = [
+  {n:"사우디아라비아",id:"682",tier:"Tier 1",ll:[45,24]},
+  {n:"브라질",id:"076",tier:"Tier 1",ll:[-52,-12]},
+  {n:"미국",id:"840",tier:"Tier 1",ll:[-98,39]},
+  {n:"일본",id:"392",tier:"Tier 1",ll:[138,37]},
+  {n:"베트남",id:"704",tier:"Tier 2",ll:[106,16]},
+  {n:"터키",id:"792",tier:"Tier 2",ll:[35,39]},
+  {n:"폴란드",id:"616",tier:"Tier 2",ll:[19,52]},
+  {n:"독일",id:"276",tier:"Tier 2",ll:[10,51]},
+  {n:"프랑스",id:"250",tier:"Tier 2",ll:[2,46.5]},
+  {n:"멕시코",id:"484",tier:"Tier 2",ll:[-102,23]},
+  {n:"홍콩",id:"344",tier:"Tier 3",ll:[114.17,22.3]},
+  {n:"캄보디아",id:"116",tier:"Tier 3",ll:[105,12.5]},
+  {n:"조지아",id:"268",tier:"Tier 3",ll:[43.5,42]},
+  {n:"영국",id:"826",tier:"Tier 3",ll:[-2,54]},
+  {n:"체코",id:"203",tier:"Tier 3",ll:[15.5,49.8]},
+  {n:"칠레",id:"152",tier:"Tier 3",ll:[-71,-33]},
+  {n:"파라과이",id:"600",tier:"Tier 3",ll:[-58,-23]},
+  {n:"아랍에미리트",id:"784",tier:"Tier 3",ll:[54,24]},
+  {n:"호주",id:"036",tier:"Tier 3",ll:[134,-25]},
+  {n:"이집트",id:"818",tier:"Tier 3",ll:[30,27]},
+  {n:"이스라엘",id:"376",tier:"Tier 3",ll:[35,31.5]}
+];
+const TF_BY_NAME = Object.fromEntries(TF_COUNTRIES.map(c=>[c.n,c]));
+const TF_BY_ID = Object.fromEntries(TF_COUNTRIES.map(c=>[c.id,c]));
+const TF_CH_ORDER = ["메타","틱톡","구글","스파크애즈","GMVMAX","싱글원","팔로우"];
+const TF_BASE = "#6F8DB3", TF_DARK = "#1E3A5F", TF_RED = "#D64545", TF_GRAY = "#EEF0F4";
+const TF_STATE = {cmp:"동기간", ch:"메타", mm:"ctr", wm:"ctr", focused:null, hov:null, hovL:null, pinned:false};
+const TF = {ready:false, idx:{}, lastDay:{}, unmatched:{}, view:{}, P:null, B:null};
+const TF_MAP = {started:false, FE:null, proj:null, g:null, paths:null, hk:null, tH:null, tR:null};
+
+/* ---------- 원천 시트 → 일별 통합 ---------- */
+const TF_META_F = {date:["일"], spend:["지출 금액 (KRW)"], imp:["노출"], clk:["링크 클릭"]};
+const TF_TT_F = {date:["일별"], spend:["지출"], imp:["노출수"], clk:["클릭수(전체)"]};
+const TF_SOURCES = [
+  Object.assign({key:"metaRoutine", ch:"메타", country:r=>normalizeCountry(r["국가"])}, TF_META_F),
+  Object.assign({key:"beyondUs", ch:"메타", country:()=>"미국"}, TF_META_F, {imp:["노출","노출수"], clk:["링크 클릭","클릭수(전체)"]}),
+  Object.assign({key:"tiktokRoutine", ch:"틱톡", country:r=>{const c=normalizeCountry(r["국가/지역"]);return c==="일본"?null:c;}}, TF_TT_F), // 일본은 일본틱톡 시트 기준
+  Object.assign({key:"jpTiktok", ch:"틱톡", country:()=>"일본"}, TF_TT_F),
+  Object.assign({key:"sparkAds", ch:"스파크애즈", country:()=>"미국"}, TF_TT_F),
+  {key:"google", ch:"구글", country:r=>normalizeCountry(r["국가/지역(일치)"])||"미국", date:["일"], spend:["비용"], imp:["노출수"], clk:["클릭수"]},
+  Object.assign({key:"jpFollow", ch:"팔로우", country:()=>"일본"}, TF_META_F),
+  {key:"jpSingleOne", ch:"싱글원", country:()=>"일본", date:["date"], spend:["cost"], imp:["impressions"], clk:["clicks"], sales:["sales"], rate:JPY_TO_KRW_RATE},
+  {key:"gmvPdrn", ch:"GMVMAX", country:()=>"미국", date:["날짜"], spend:["Cost"], sales:["Gross revenue"], orders:["SKU orders"]},
+  {key:"gmvAll", ch:"GMVMAX", country:()=>"미국", date:["날짜"], spend:["Cost"], sales:["Gross revenue"], orders:["SKU orders"]}
+];
+function tfPick(r, names){
+  for(const n of names){ if(r[n]!==undefined && r[n]!=="") return r[n]; }
+  return "";
+}
+function tfBuild(){
+  TF.idx = {}; TF.lastDay = {}; TF.unmatched = {};
+  TF_SOURCES.forEach(src=>{
+    (DATA[src.key]||[]).forEach(r=>{
+      const d = normalizeDate(tfPick(r, src.date));
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+      const country = src.country(r);
+      if(!country) return;
+      const rate = src.rate||1;
+      const spend = num(tfPick(r, src.spend))*rate;
+      const imp = src.imp ? num(tfPick(r, src.imp)) : 0;
+      const clk = src.clk ? num(tfPick(r, src.clk)) : 0;
+      const sales = src.sales ? num(tfPick(r, src.sales))*rate : 0;
+      const orders = src.orders ? num(tfPick(r, src.orders)) : 0;
+      const month = d.slice(0,7), day = parseInt(d.slice(8,10),10);
+      if(!TF_BY_NAME[country]){
+        const um = TF.unmatched[month]||(TF.unmatched[month]={});
+        const k = country+" ("+src.ch+")";
+        um[k] = (um[k]||0)+spend;
+        return;
+      }
+      const mi = TF.idx[month]||(TF.idx[month]={});
+      const key = country+"|"+src.ch;
+      const arr = mi[key]||(mi[key]=Array.from({length:32},()=>({s:0,i:0,c:0,sl:0,o:0})));
+      const a = arr[day];
+      a.s+=spend; a.i+=imp; a.c+=clk; a.sl+=sales; a.o+=orders;
+      if(spend>0||imp>0) TF.lastDay[month] = Math.max(TF.lastDay[month]||0, day);
+    });
+  });
+  TF.ready = true;
+}
+
+/* ---------- 기간·집계 ---------- */
+function tfDaysIn(month){ const [y,m]=month.split("-").map(Number); return new Date(y,m,0).getDate(); }
+function tfPrevMonth(month){ let [y,m]=month.split("-").map(Number); m-=1; if(m<1){m=12;y-=1;} return y+"-"+String(m).padStart(2,"0"); }
+function tfPeriod(){
+  const m = SELECTED_MONTH, pm = tfPrevMonth(m);
+  const dim = tfDaysIn(m), pdim = tfDaysIn(pm);
+  const L = Math.max(1, Math.min(TF.lastDay[m]||dim, dim)); // 데이터가 있는 마지막 날
+  const cur = [1,L];
+  const prev = TF_STATE.cmp==="동기간" ? [1,Math.min(L,pdim)] : [1,pdim];
+  return {m, pm, dim, pdim, L, cur, prev, mo:parseInt(m.slice(5),10), pmo:parseInt(pm.slice(5),10)};
+}
+function tfSum(month, country, ch, d1, d2){
+  const o = {s:0,i:0,c:0,sl:0,o:0};
+  const arr = (TF.idx[month]||{})[country+"|"+ch];
+  if(!arr) return o;
+  for(let d=d1; d<=d2 && d<=31; d++){
+    const a = arr[d]; o.s+=a.s; o.i+=a.i; o.c+=a.c; o.sl+=a.sl; o.o+=a.o;
+  }
+  return o;
+}
+const TF_M = {
+  sp:  {n:"지출", val:o=>o.s, fmt:v=>fmt(v)+"원", df:x=>fmt(Math.abs(x))+"원", g:0},
+  imp: {n:"노출", val:o=>o.i, fmt:v=>fmt(v), df:x=>fmt(Math.abs(x)), g:0},
+  clk: {n:"클릭", val:o=>o.c, fmt:v=>fmt(v), df:x=>fmt(Math.abs(x)), g:0},
+  ctr: {n:"CTR", val:o=>o.i>0?o.c/o.i*100:null, fmt:v=>v.toFixed(2)+"%", df:x=>Math.abs(x).toFixed(2)+"%p", g:1},
+  cpc: {n:"CPC", val:o=>o.c>0?o.s/o.c:null, fmt:v=>fmt(v)+"원", df:x=>fmt(Math.abs(x))+"원", g:-1},
+  cpm: {n:"CPM", val:o=>o.i>0?o.s/o.i*1000:null, fmt:v=>fmt(v)+"원", df:x=>fmt(Math.abs(x))+"원", g:-1},
+  sales:{n:"매출", val:o=>o.sl, fmt:v=>fmt(v)+"원", df:x=>fmt(Math.abs(x))+"원", g:0},
+  roas:{n:"ROAS", val:o=>o.s>0?o.sl/o.s*100:null, fmt:v=>fmt(v)+"%", df:x=>fmt(Math.abs(x))+"%p", g:1}
+};
+function tfVal(key,o){ const x=TF_M[key].val(o); return x==null?"—":TF_M[key].fmt(x); }
+function tfDeltaHtml(v, p, X, gray, withPct){
+  if(v==null || p==null) return '<span class="tf-z">—</span>';
+  const df = v-p;
+  const cc = (gray||X.g===0||df===0) ? "tf-z" : (df*X.g>0 ? "tf-g" : "tf-b");
+  const pc = (withPct && p!==0) ? ` (${Math.abs(df/p*100).toFixed(1)}%)` : "";
+  return `<span class="${cc}">${df>=0?"▲":"▼"} ${X.df(df)}${pc}</span>`;
+}
+function tfBudget(country, ch){
+  const B = TF.B; if(!B) return 0;
+  if(ch==="메타"||ch==="틱톡"||ch==="구글") return B.buckets[country+"|"+ch]||0;
+  if(ch==="스파크애즈") return country==="미국" ? B.special.sparkAds : 0;
+  if(ch==="GMVMAX") return country==="미국" ? B.special.gmv : 0;
+  if(ch==="싱글원") return country==="일본" ? B.special.singleOne : 0;
+  if(ch==="팔로우") return country==="일본" ? B.special.follow : 0;
+  return 0;
+}
+
+/* ---------- 화면 렌더 ---------- */
+function tfSeg(el, arr, cur, fn, cls){
+  document.getElementById(el).innerHTML = arr.map(a=>`<span class="${cls}${a[0]===cur?" on":""}" onclick="${fn}('${a[0]}')">${a[1]}</span>`).join("");
+}
+function tfSetCh(v){ TF_STATE.ch=v; tfRenderAll(); }
+function tfSetCmp(v){ TF_STATE.cmp=v; tfRenderAll(); }
+function tfSetMm(v){ TF_STATE.mm=v; tfRenderAll(); }
+function tfSetWm(v){ TF_STATE.wm=v; tfRenderAll(); }
+
+function tfRenderAll(){
+  if(!TF.ready || !SELECTED_MONTH) return;
+  const P = tfPeriod(); TF.P = P; TF.B = aggregateBudget(P.m);
+  const ch = TF_STATE.ch, thr = TF_SAMPLE_CLICKS_PER_DAY*P.L;
+  TF.view = {};
+  TF_COUNTRIES.forEach(c=>{
+    const cur = tfSum(P.m,c.n,ch,P.cur[0],P.cur[1]);
+    const prv = tfSum(P.pm,c.n,ch,P.prev[0],P.prev[1]);
+    TF.view[c.n] = {cur, prv, on:(cur.s>0||cur.i>0), small:(cur.c<thr)};
+  });
+  tfSeg("tfCmp",[["동기간","전월 동기간"],["전체","전월 전체"]],TF_STATE.cmp,"tfSetCmp","tf-tab");
+  const chs = ["메타","틱톡","구글"].map(c=>[c,c]);
+  tfSeg("tfCh",chs,ch,"tfSetCh","tf-tab");
+  tfSeg("tfCh2",chs,ch,"tfSetCh","tf-tab");
+  document.getElementById("tfBasis").textContent =
+    `비교 기준: ${P.mo}월 1~${P.L}일 vs ${P.pmo}월 ` + (TF_STATE.cmp==="동기간" ? `1~${P.prev[1]}일 (같은 일수끼리)` : `전체 (1~${P.pdim}일)`) +
+    (ch==="메타" ? " · 미국 메타 = 메타루틴(US) + 비욘드어스메타" : "");
+  tfRenderKpi(); tfRenderList(); tfRenderWeeks(); tfRenderNote();
+  if(TF_STATE.focused){ document.getElementById("tfOv").innerHTML = tfOverlayHtml(TF_STATE.focused); }
+  tfUpd();
+}
+
+function tfRenderKpi(){
+  const cur={s:0,i:0,c:0}, prv={s:0,i:0,c:0};
+  TF_COUNTRIES.forEach(c=>{ const v=TF.view[c.n]; ["s","i","c"].forEach(k=>{cur[k]+=v.cur[k]; prv[k]+=v.prv[k];}); });
+  const items = ["sp","imp","clk","ctr","cpc","cpm"];
+  document.getElementById("tfKpi").innerHTML = items.map(k=>{
+    const X=TF_M[k], v=X.val(cur), p=X.val(prv);
+    return `<div class="card2 tf-kpi"><div class="label">${X.n} · ${TF_STATE.ch}</div><div class="tf-kv">${v==null?"—":X.fmt(v)}</div><div class="tf-kd">${tfDeltaHtml(v,p,X,false,true)} <span class="tf-z">전월 ${p==null?"—":X.fmt(p)}</span></div></div>`;
+  }).join("");
+}
+
+function tfRenderList(){
+  tfSeg("tfMm",["ctr","cpc","sp"].map(k=>[k,TF_M[k].n]),TF_STATE.mm,"tfSetMm","tf-chip");
+  const X = TF_M[TF_STATE.mm];
+  const vals = TF_COUNTRIES.filter(c=>TF.view[c.n].on).map(c=>X.val(TF.view[c.n].cur)).filter(v=>v!=null);
+  const lo = vals.length?Math.min(...vals):0, hi = vals.length?Math.max(...vals):1, base = lo*.6;
+  document.getElementById("tfRk").innerHTML = TF_COUNTRIES.map((c,i)=>{
+    const v = TF.view[c.n], val = v.on ? X.val(v.cur) : null;
+    if(val==null) return `<div class="tf-li" data-n="${c.n}" onmouseenter="tfRowIn('${c.n}')" onmouseleave="tfRowOut()"><div class="a"><span class="tf-z">${i+1}</span><span>${c.n}<span class="tf-tc">${c.tier}</span></span><span class="tf-z">—</span></div><div class="c tf-z">${TF_STATE.ch} 미운영</div></div>`;
+    const p = X.val(v.prv), w = hi>base ? Math.max(6,(val-base)/(hi-base)*72) : 72;
+    return `<div class="tf-li" data-n="${c.n}" onmouseenter="tfRowIn('${c.n}')" onmouseleave="tfRowOut()" onclick="tfRowClick('${c.n}')"><div class="a"><span class="tf-z">${i+1}</span><span>${c.n}${v.small?" *":""}<span class="tf-tc">${c.tier}</span></span><b>${X.fmt(val)}</b></div><div class="tf-bar2" style="width:${w}%;opacity:${v.small?.35:1}"></div><div class="c">${tfDeltaHtml(val,p,X,v.small,true)}</div></div>`;
+  }).join("");
+}
+
+function tfRenderWeeks(){
+  const P = TF.P, ch = TF_STATE.ch, X = TF_M[TF_STATE.wm];
+  tfSeg("tfWm",["ctr","cpc"].map(k=>[k,TF_M[k].n]),TF_STATE.wm,"tfSetWm","tf-chip");
+  document.getElementById("tfWmDesc").textContent = X.g===1 ? "CTR이 오르면 초록" : "CPC가 내리면 초록";
+  const W = [[1,7],[8,14],[15,21],[22,P.dim]];
+  let h = '<tr><th style="width:15%;text-align:left">국가</th>' + W.map((w,i)=>{
+    const ing = (P.L>=w[0] && P.L<w[1]) ? ' <span class="tf-ing">집계 중</span>' : "";
+    return `<th>${i+1}주차${ing}<small>${P.mo}/${w[0]}~${w[1]}</small></th>`;
+  }).join("") + `<th style="width:22%">월 전체<small>${P.mo}/1~${P.L} · 전월 대비</small></th></tr>`;
+  let last = "", count = 0;
+  TF_COUNTRIES.forEach(c=>{
+    const v = TF.view[c.n]; if(!v.on) return;
+    count++;
+    if(c.tier!==last){ h += `<tr class="tf-tr"><td colspan="6">${c.tier}</td></tr>`; last=c.tier; }
+    const ws = W.map(w=> w[0]>P.L ? null : tfSum(P.m,c.n,ch,w[0],Math.min(w[1],P.L)));
+    const vals = ws.map(o=>o?X.val(o):null);
+    h += `<tr><td class="tf-n">${c.n}</td>` + ws.map((o,i)=>{
+      if(!o || vals[i]==null) return '<td class="tf-cell tf-na">—</td>';
+      const days = Math.min(W[i][1],P.L)-W[i][0]+1;
+      const small = o.c < TF_SAMPLE_CLICKS_PER_DAY*days;
+      let dl = '<div class="tf-dl tf-z">—</div>', bg = "transparent";
+      if(i>0 && vals[i-1]!=null){
+        const df = vals[i]-vals[i-1];
+        dl = `<div class="tf-dl">${tfDeltaHtml(vals[i],vals[i-1],X,small,false)}</div>`;
+        if(!small && df!==0 && vals[i-1]!==0){
+          const a = Math.min(Math.abs(df/vals[i-1])/0.2,1);
+          bg = (df*X.g>0) ? `rgba(34,122,76,${.05+a*.17})` : `rgba(163,45,45,${.05+a*.17})`;
+        }
+      }
+      return `<td class="tf-cell ${small?"tf-sm":""}" style="background:${bg}"><div class="tf-v">${X.fmt(vals[i])}${small?"*":""}</div>${dl}</td>`;
+    }).join("");
+    const mv = X.val(v.cur), mp = X.val(v.prv);
+    h += `<td class="tf-cell ${v.small?"tf-sm":""}" style="background:#F6F7FA"><div class="tf-v">${mv==null?"—":X.fmt(mv)}${v.small?"*":""}</div><div class="tf-dl">${tfDeltaHtml(mv,mp,X,v.small,true)}</div></td></tr>`;
+  });
+  if(!count) h += '<tr><td colspan="6" class="muted" style="padding:14px 0">이 달에 해당 채널 집행 데이터가 없습니다</td></tr>';
+  document.getElementById("tfWk").innerHTML = h;
+}
+
+function tfRenderNote(){
+  const um = TF.unmatched[TF.P.m] || {};
+  const arr = Object.entries(um).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]);
+  const el = document.getElementById("tfNote");
+  el.textContent = arr.length
+    ? "※ 21개국 목록에 없어 제외된 데이터: " + arr.slice(0,4).map(e=>`${e[0]} ${fmt(e[1])}원`).join(", ") + (arr.length>4?` 외 ${arr.length-4}건`:"")
+    : "";
+}
+
+/* ---------- 국가 상세 카드(지도 위 오버레이) ---------- */
+function tfOverlayHtml(name){
+  const c = TF_BY_NAME[name], P = TF.P;
+  const chans = TF_CH_ORDER.map(ch=>({ch, cur:tfSum(P.m,name,ch,P.cur[0],P.cur[1]), prv:tfSum(P.pm,name,ch,P.prev[0],P.prev[1])}))
+    .filter(x=>x.cur.s>0||x.cur.i>0||x.prv.s>0);
+  let h = `<div class="tf-oh"><span><b>${name}</b><span class="tf-tc">${c.tier}</span></span><span class="tf-x" onclick="tfCloseOv()">${TF_STATE.pinned?"고정됨 ✕":"✕"}</span></div>`
+        + `<div class="tf-sub">집행 채널 ${chans.length}개 · ${P.mo}월 1~${P.L}일 · 전월 대비 증감</div>`;
+  if(!chans.length) h += '<div class="tf-sub" style="margin-top:8px">이 기간 집행 데이터가 없습니다</div>';
+  chans.forEach(x=>{
+    const cur=x.cur, prv=x.prv, bud=tfBudget(name,x.ch), r=bud>0?cur.s/bud*100:null;
+    const cv = (x.ch==="GMVMAX"||x.ch==="싱글원");
+    const d = k=> tfDeltaHtml(TF_M[k].val(cur),TF_M[k].val(prv),TF_M[k],false,false);
+    h += `<div class="tf-chc ${cv?"cv":""}"><div class="tf-chh"><span>${x.ch}${cv?' <span style="font-weight:400;color:var(--label)">전환형</span>':""}</span><span>${r==null?"예산 없음":"소진율 "+r.toFixed(1)+"%"}</span></div>`;
+    if(r!=null) h += `<div class="tf-pb"><i style="width:${Math.min(r,100)}%"></i></div>`;
+    h += `<div class="tf-ln"><s>예산</s> ${bud>0?fmt(bud)+"원":"—"} · <s>지출</s> ${fmt(cur.s)}원</div>`;
+    if(x.ch==="GMVMAX"){
+      h += `<div class="tf-ln"><s>매출</s> ${tfVal("sales",cur)} ${d("sales")} · <s>주문</s> ${fmt(cur.o)}건</div>`;
+      h += `<div class="tf-ln"><s>ROI</s> <b>${tfVal("roas",cur)}</b> ${d("roas")}</div>`;
+    } else {
+      h += `<div class="tf-ln"><s>노출</s> ${fmt(cur.i)} · <s>CTR</s> <b>${tfVal("ctr",cur)}</b> ${d("ctr")}</div>`;
+      h += `<div class="tf-ln"><s>CPM</s> <b>${tfVal("cpm",cur)}</b> ${d("cpm")}</div>`;
+      if(x.ch==="싱글원") h += `<div class="tf-ln"><s>ROAS</s> <b>${tfVal("roas",cur)}</b> ${d("roas")} · <s>매출</s> ${tfVal("sales",cur)}</div>`;
+    }
+    h += `</div>`;
+  });
+  return h;
+}
+
+/* ---------- 지도 ---------- */
+function tfIsRed(n){ return TF_STATE.focused===n || TF_STATE.hovL===n; }
+function tfOn(n){ return TF.view[n] && TF.view[n].on; }
+function tfColor(d){
+  const c = TF_BY_ID[String(d.id).padStart(3,"0")];
+  if(!c || !tfOn(c.n)) return TF_GRAY;
+  return tfIsRed(c.n) ? TF_RED : (TF_STATE.hov===c.n ? TF_DARK : TF_BASE);
+}
+function tfUpd(){
+  if(TF_MAP.paths) TF_MAP.paths.attr("fill", tfColor);
+  if(TF_MAP.hk) TF_MAP.hk.attr("fill", tfIsRed("홍콩")?TF_RED:TF_DARK);
+  document.querySelectorAll(".tf-li").forEach(el=>el.classList.toggle("on", tfIsRed(el.dataset.n)));
+}
+function tfBigPoly(feat){
+  let g = feat.geometry;
+  if(g.type==="MultiPolygon"){
+    // 본토 + 본토 면적의 25% 이상인 큰 섬만 확대 범위에 포함 (해외령·먼 섬 제외)
+    const parts = g.coordinates.map(co=>({co, a:d3.geoArea({type:"Polygon",coordinates:co})}));
+    const mx = Math.max(...parts.map(x=>x.a));
+    g = {type:"MultiPolygon",coordinates:parts.filter(x=>x.a>=mx*0.25).map(x=>x.co)};
+  }
+  return {type:"Feature",geometry:g};
+}
+function tfClearT(){ clearTimeout(TF_MAP.tH); clearTimeout(TF_MAP.tR); }
+function tfFocus(n){
+  tfClearT(); TF_STATE.focused = n;
+  const ov = document.getElementById("tfOv");
+  ov.innerHTML = tfOverlayHtml(n); ov.classList.add("show");
+  document.getElementById("tfTip").style.display = "none";
+  if(TF_MAP.FE){
+    const c = TF_BY_NAME[n], path = d3.geoPath(TF_MAP.proj);
+    const feat = TF_MAP.FE.find(d=>String(d.id).padStart(3,"0")===c.id);
+    let cx, cy, k; const RW=320, H=400;
+    if(feat){
+      const b = path.bounds(tfBigPoly(feat)), dx=b[1][0]-b[0][0], dy=b[1][1]-b[0][1];
+      cx=(b[0][0]+b[1][0])/2; cy=(b[0][1]+b[1][1])/2; k=Math.min(.78*RW/dx,.78*H/dy,14);
+    } else { [cx,cy]=TF_MAP.proj(c.ll); k=14; }
+    TF_MAP.g.transition().duration(550).attr("transform",`translate(${RW/2+6-k*cx},${H/2-k*cy}) scale(${k})`);
+    TF_MAP.hk.transition().duration(550).attr("r",4/k).attr("stroke-width",1/k);
+  }
+  tfUpd();
+}
+function tfReset(){
+  tfClearT(); TF_STATE.focused=null; TF_STATE.pinned=false;
+  document.getElementById("tfOv").classList.remove("show");
+  if(TF_MAP.FE){
+    TF_MAP.g.transition().duration(500).attr("transform","translate(0,0) scale(1)");
+    TF_MAP.hk.transition().duration(500).attr("r",4).attr("stroke-width",1);
+  }
+  tfUpd();
+}
+function tfEnterC(n){ tfClearT(); if(TF_STATE.pinned||TF_STATE.focused===n) return; TF_MAP.tH=setTimeout(()=>tfFocus(n), TF_STATE.focused?350:220); }
+function tfEnterNone(){ tfClearT(); if(TF_STATE.pinned||!TF_STATE.focused) return; TF_MAP.tR=setTimeout(tfReset,500); }
+function tfLeaveStage(){ clearTimeout(TF_MAP.tH); if(TF_STATE.pinned||!TF_STATE.focused) return; clearTimeout(TF_MAP.tR); TF_MAP.tR=setTimeout(tfReset,450); }
+function tfRowIn(n){ TF_STATE.hovL=n; tfUpd(); }
+function tfRowOut(){ TF_STATE.hovL=null; tfUpd(); }
+function tfRowClick(n){
+  if(!tfOn(n)) return;
+  tfFocus(n); TF_STATE.pinned=true;
+  document.getElementById("tfOv").innerHTML = tfOverlayHtml(n);
+  document.getElementById("tfStage").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function tfPinToggle(n){
+  if(!tfOn(n)) return;
+  if(TF_STATE.pinned && TF_STATE.focused===n){ TF_STATE.pinned=false; }
+  else { tfFocus(n); TF_STATE.pinned=true; }
+  document.getElementById("tfOv").innerHTML = tfOverlayHtml(n);
+}
+function tfCloseOv(){ TF_STATE.pinned=false; tfReset(); }
+function tfShowTip(c, e){
+  const r = document.getElementById("tfStage").getBoundingClientRect(), tip = document.getElementById("tfTip");
+  tip.textContent = c.n+" · "+c.tier; tip.style.display="block";
+  tip.style.left=(e.clientX-r.left+12)+"px"; tip.style.top=(e.clientY-r.top+12)+"px";
+}
+function tfLoadScript(src){
+  return new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+}
+async function tfInitMap(){
+  if(TF_MAP.started) return; TF_MAP.started = true;
+  const note = document.getElementById("tfMapNote");
+  try{
+    await tfLoadScript("https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js");
+    await tfLoadScript("https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js");
+    const w = await fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(r=>r.json());
+    const FE = topojson.feature(w, w.objects.countries).features.filter(d=>d.id!=="010");
+    const proj = d3.geoNaturalEarth1().fitExtent([[0,35],[640,365]],{type:"FeatureCollection",features:FE});
+    const p = d3.geoPath(proj);
+    TF_MAP.FE = FE; TF_MAP.proj = proj; TF_MAP.g = d3.select("#tfZg");
+    TF_MAP.paths = TF_MAP.g.selectAll("path").data(FE).join("path").attr("d",p).attr("stroke","#fff").attr("stroke-width",.6).attr("fill",TF_GRAY)
+      .on("mouseenter",(e,d)=>{ const c=TF_BY_ID[String(d.id).padStart(3,"0")]; if(c&&tfOn(c.n)){ TF_STATE.hov=c.n; tfUpd(); tfEnterC(c.n); if(!TF_STATE.focused) tfShowTip(c,e); } else tfEnterNone(); })
+      .on("mousemove",(e,d)=>{ const c=TF_BY_ID[String(d.id).padStart(3,"0")]; if(c&&tfOn(c.n)&&!TF_STATE.focused) tfShowTip(c,e); })
+      .on("mouseleave",()=>{ clearTimeout(TF_MAP.tH); TF_STATE.hov=null; tfUpd(); document.getElementById("tfTip").style.display="none"; })
+      .on("click",(e,d)=>{ const c=TF_BY_ID[String(d.id).padStart(3,"0")]; if(c) tfPinToggle(c.n); });
+    const hp = proj(TF_BY_NAME["홍콩"].ll);
+    TF_MAP.hk = TF_MAP.g.append("circle").attr("cx",hp[0]).attr("cy",hp[1]).attr("r",4).attr("fill",TF_DARK).attr("stroke","#fff").attr("stroke-width",1).style("cursor","pointer")
+      .on("mouseenter",e=>{ if(tfOn("홍콩")){ tfEnterC("홍콩"); if(!TF_STATE.focused) tfShowTip(TF_BY_NAME["홍콩"],e); } })
+      .on("mouseleave",()=>{ clearTimeout(TF_MAP.tH); document.getElementById("tfTip").style.display="none"; })
+      .on("click",()=>tfPinToggle("홍콩"));
+    const stage = document.getElementById("tfStage");
+    stage.addEventListener("mouseleave",()=>{ document.getElementById("tfTip").style.display="none"; TF_STATE.hov=null; tfUpd(); tfLeaveStage(); });
+    document.getElementById("tfBg").addEventListener("mouseenter",tfEnterNone);
+    const ov = document.getElementById("tfOv");
+    ov.addEventListener("mouseenter",tfClearT); ov.addEventListener("mouseleave",tfLeaveStage);
+    note.textContent = "· 홍콩은 점";
+    tfUpd();
+  }catch(e){
+    note.textContent = "지도 데이터를 불러오지 못했습니다 (목록에서 선택하면 상세 카드는 표시됩니다)";
+    TF_MAP.started = false;
+  }
+}
+
+/* ---------- 페이지 전환 ---------- */
+function showPage(p){
+  document.getElementById("page-budget").style.display = p==="budget" ? "" : "none";
+  document.getElementById("page-traffic").style.display = p==="traffic" ? "" : "none";
+  document.getElementById("navBudget").classList.toggle("on", p==="budget");
+  document.getElementById("navTraffic").classList.toggle("on", p==="traffic");
+  document.getElementById("dayProgress").style.visibility = p==="budget" ? "visible" : "hidden";
+  if(p==="traffic"){
+    // 목록 카드의 오버레이 카드 클릭 등에서 쓰일 수 있도록 지도를 지연 로딩
+    tfRenderAll(); tfInitMap();
+  }
 }
 
 init();
