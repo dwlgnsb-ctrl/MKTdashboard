@@ -161,6 +161,15 @@
     <div class="footnote">미국 메타 = 메타루틴(US) + 비욘드어스메타 합산 · 일본 메타 = 메타루틴(JP) · 팔로우광고 = 일본팔로우메타 · 싱글원 = 일본싱글원(엔화→원화 고정환율 환산)</div>
   </div>
 
+  <div class="section-title">CBT</div>
+  <div class="card">
+    <table>
+      <thead><tr><td style="width:22%">국가</td><td style="width:18%">캠페인</td><td style="width:60%">메타 예산/소진</td></tr></thead>
+      <tbody id="cbtTable"></tbody>
+    </table>
+    <div class="footnote" id="cbtNote">메타루틴 중 캠페인명에 CBT가 포함된 행 · 국가는 국가 열 기준· 예산은 월예산Budget의 CBT 행(광고유형/항목에 CBT 포함) 기준 · 캠페인별 행은 소진만 표시 · 위 국가별 루틴 소진에서는 제외</div>
+  </div>
+
   <div class="section-title">개별 운영 항목</div>
   <div class="card"><div class="grid3" id="standaloneCards"></div></div>
   </div>
@@ -327,7 +336,7 @@ async function init(){
 function aggregateBudget(month){
   const rows = DATA.budget.filter(r=>r["월"]===month);
   const buckets = {}; // "국가|매체" -> 금액
-  const special = { gmv:0, sparkAds:0, singleOne:0, follow:0, kbeauty:0 };
+  const special = { gmv:0, sparkAds:0, singleOne:0, follow:0, kbeauty:0, cbt:{} };
 
   rows.forEach(r=>{
     const adType = (r["광고유형"]||"").trim();
@@ -337,6 +346,7 @@ function aggregateBudget(month){
     const amount = num(r["예산(원)"]);
 
     if(adType==="국내광고") return; // 완전 제외
+    if(/CBT/i.test(adType) || /CBT/i.test(item)){ special.cbt[country] = (special.cbt[country]||0) + amount; return; } // CBT는 국가 루틴 예산과 분리
     if(item==="틱톡샵 GMV"){ special.gmv += amount; return; }
     if(item==="틱톡샵 자체 광고"){ special.sparkAds += amount; return; }
     if(item==="싱글원"){ special.singleOne += amount; return; }
@@ -371,8 +381,46 @@ function sumTotal(rows, dateField, spendField, month, rateMultiplier){
   return total;
 }
 
+/* CBT: 메타루틴 중 캠페인명에 CBT 포함. 예: 26년9월21~27_4주차_CBT_03_(프랑스)_4200000_매출_전환수극대화_[IG] */
+function isCbt(name){ return /CBT/i.test(name||""); }
+function aggregateCbt(month){
+  const camps = {}; // 캠페인명 -> {country, tag, budget, used}
+  (DATA.metaRoutine||[]).forEach(r=>{
+    const name = (r["캠페인 이름"]||"").trim();
+    if(!isCbt(name) || monthOf(r["일"])!==month) return;
+    if(!camps[name]){
+      const cm = name.match(/\(([^)]+)\)/);
+      const bm = name.match(/_(\d{5,})(?=[_.\s]|$)/);
+      const tm = name.match(/CBT[_\s-]*(\d+)/i);
+      camps[name] = {
+        country: normalizeCountry(r["국가"]) || normalizeCountry(cm?cm[1]:"") || "기타",
+        tag: tm ? "CBT_"+tm[1] : "CBT",
+        budget: bm ? Number(bm[1]) : 0,
+        used: 0
+      };
+    }
+    camps[name].used += num(r["지출 금액 (KRW)"]);
+  });
+  const byCountry = {};
+  Object.values(camps).forEach(c=>{
+    const o = byCountry[c.country] || (byCountry[c.country] = {budget:0, used:0, camps:[]});
+    o.budget += c.budget; o.used += c.used; o.camps.push(c);
+  });
+  return byCountry;
+}
+
 function aggregateActuals(month){
   const metaRoutineByCountry = sumByCountry(DATA.metaRoutine, "일", "국가", "지출 금액 (KRW)", month);
+  const cbtByCountry = aggregateCbt(month);
+  let cbtTotal = 0;
+  // 국가 합산에서 CBT 지출 분리 (이중 집계 방지)
+  (DATA.metaRoutine||[]).forEach(r=>{
+    if(!isCbt(r["캠페인 이름"]) || monthOf(r["일"])!==month) return;
+    const c = normalizeCountry(r["국가"]); if(!c) return;
+    const v = num(r["지출 금액 (KRW)"]);
+    metaRoutineByCountry[c] = (metaRoutineByCountry[c]||0) - v;
+    cbtTotal += v;
+  });
   const tiktokRoutineByCountry = sumByCountry(DATA.tiktokRoutine, "일별", "국가/지역", "지출", month);
   const beyondUsTotal = sumTotal(DATA.beyondUs, "일", "지출 금액 (KRW)", month);
   const jpTiktokTotal = sumTotal(DATA.jpTiktok, "일별", "지출", month);
@@ -388,7 +436,7 @@ function aggregateActuals(month){
   const usTiktok = tiktokRoutineByCountry["미국"]||0;
 
   return {
-    metaRoutineByCountry, tiktokRoutineByCountry,
+    metaRoutineByCountry, tiktokRoutineByCountry, cbtByCountry, cbtTotal,
     usMeta, jpMeta, usTiktok, jpTiktokTotal, googleTotal,
     jpFollowTotal, jpSingleOneTotal, sparkAdsTotal, gmvTotal, kbeautyTotal
   };
@@ -432,6 +480,7 @@ function render(){
   // 총예산/사용예산 계산
   let totalBudget = 0, totalUsed = 0;
   Object.values(buckets).forEach(v=> totalBudget += v);
+  totalBudget += Object.values(special.cbt).reduce((a,b)=>a+b,0);
   totalBudget += special.gmv + special.sparkAds + special.singleOne + special.follow + special.kbeauty;
 
   Object.keys(buckets).forEach(key=>{
@@ -450,6 +499,7 @@ function render(){
     }
     totalUsed += used;
   });
+  totalUsed += actuals.cbtTotal;
   totalUsed += actuals.jpFollowTotal + actuals.jpSingleOneTotal + actuals.sparkAdsTotal + actuals.gmvTotal + actuals.kbeautyTotal;
 
   const overallPct = pct(totalUsed, totalBudget);
@@ -478,6 +528,8 @@ function render(){
       googleBudget+=b; googleUsed+=used;
     }
   });
+  metaUsed += actuals.cbtTotal;
+  metaBudget += Object.values(special.cbt).reduce((a,b)=>a+b,0);
   const otherBudget = special.sparkAds+special.gmv+special.singleOne+special.follow+special.kbeauty;
   const otherUsed = actuals.sparkAdsTotal+actuals.gmvTotal+actuals.jpSingleOneTotal+actuals.jpFollowTotal+actuals.kbeautyTotal;
 
@@ -557,6 +609,24 @@ function render(){
       <td>${amtBarCell(special.singleOne, actuals.jpSingleOneTotal)}</td>
     </tr>
   `;
+
+  // CBT 테이블
+  const cbtMap = {};
+  Object.entries(actuals.cbtByCountry).forEach(([c,o])=>{ cbtMap[c] = {budget:0, used:o.used, camps:o.camps, nameBudget:o.budget}; });
+  Object.entries(special.cbt).forEach(([c,b])=>{ (cbtMap[c] = cbtMap[c] || {budget:0, used:0, camps:[], nameBudget:0}).budget += b; });
+  const cbtEntries = Object.entries(cbtMap).sort((a,b)=>b[1].budget-a[1].budget);
+  let cbtHtml = "";
+  cbtEntries.forEach(([country,o])=>{
+    cbtHtml += `<tr class="datarow"><td>${country}</td><td class="muted">${o.camps.length}개</td><td>${amtBarCell(o.budget, o.used)}</td></tr>`;
+    o.camps.sort((a,b)=>a.tag.localeCompare(b.tag)).forEach(c=>{
+      cbtHtml += `<tr><td></td><td class="muted" style="font-size:12px">${c.tag}</td><td style="font-size:12px;color:var(--label)">소진 ${fmt(c.used)}</td></tr>`;
+    });
+  });
+  if(cbtEntries.length){
+    const tb = cbtEntries.reduce((x,[,o])=>x+o.budget,0), tu = cbtEntries.reduce((x,[,o])=>x+o.used,0);
+    cbtHtml += `<tr class="tier-row"><td>합계</td><td></td><td style="text-align:left">${amtBarCell(tb,tu)}</td></tr>`;
+  }
+  document.getElementById("cbtTable").innerHTML = cbtHtml || `<tr><td colspan="3" class="muted">해당 월 CBT 데이터 없음</td></tr>`;
 
   // 개별 운영 항목
   function standaloneCard(name, b, u){
