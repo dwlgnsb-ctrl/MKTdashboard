@@ -164,10 +164,14 @@
   <div class="section-title">CBT</div>
   <div class="card">
     <table>
-      <thead><tr><td style="width:22%">국가</td><td style="width:18%">캠페인</td><td style="width:60%">메타 예산/소진</td></tr></thead>
+      <thead><tr>
+        <td style="width:11%">국가</td>
+        <td style="width:17.8%">메타 예산/소진</td>
+        <td style="width:17.8%"></td><td style="width:17.8%"></td><td style="width:17.8%"></td><td style="width:17.8%"></td>
+      </tr></thead>
       <tbody id="cbtTable"></tbody>
     </table>
-    <div class="footnote" id="cbtNote">메타루틴 중 캠페인명에 CBT가 포함된 행 · 국가는 국가 열 기준· 예산은 월예산Budget의 CBT 행(광고유형/항목에 CBT 포함) 기준 · 캠페인별 행은 소진만 표시 · 위 국가별 루틴 소진에서는 제외</div>
+    <div class="footnote" id="cbtNote">CBT = 메타루틴 중 캠페인명에 CBT가 포함된 행 · 소진은 국가 열 기준 · 예산은 월예산Budget의 CBT 행(광고유형/항목에 CBT 포함) 기준 · 위 국가별 루틴 소진에서는 제외</div>
   </div>
 
   <div class="section-title">개별 운영 항목</div>
@@ -239,12 +243,13 @@ function gvizUrl(sheetName){
 /* ===================== 국가 정규화 ===================== */
 const ISO_NAME = {US:"미국",JP:"일본",BR:"브라질",DE:"독일",FR:"프랑스",GB:"영국",PL:"폴란드",CZ:"체코",
   SA:"사우디아라비아",AE:"아랍에미리트",EG:"이집트",IL:"이스라엘",MX:"멕시코",PY:"파라과이",CL:"칠레",
-  KH:"캄보디아",VN:"베트남",HK:"홍콩",TR:"터키",AU:"호주",GE:"조지아"};
+  KH:"캄보디아",VN:"베트남",HK:"홍콩",TR:"터키",AU:"호주",GE:"조지아",
+  IT:"이탈리아",ES:"스페인",NL:"네덜란드",PT:"포르투갈",RO:"루마니아",GR:"그리스"};
 const ENGLISH_NAME = {"united states":"미국","japan":"일본","brazil":"브라질","germany":"독일","france":"프랑스",
   "united kingdom":"영국","poland":"폴란드","czech republic":"체코","czechia":"체코","saudi arabia":"사우디아라비아",
   "united arab emirates":"아랍에미리트","egypt":"이집트","israel":"이스라엘","mexico":"멕시코","paraguay":"파라과이",
   "chile":"칠레","cambodia":"캄보디아","vietnam":"베트남","hong kong":"홍콩","turkey":"터키","australia":"호주",
-  "georgia":"조지아"};
+  "georgia":"조지아","italy":"이탈리아","spain":"스페인","netherlands":"네덜란드","portugal":"포르투갈","romania":"루마니아","greece":"그리스"};
 
 function normalizeCountry(v){
   if(!v) return null;
@@ -392,9 +397,10 @@ function aggregateCbt(month){
       const cm = name.match(/\(([^)]+)\)/);
       const bm = name.match(/_(\d{5,})(?=[_.\s]|$)/);
       const tm = name.match(/CBT[_\s-]*(\d+)/i);
+      const om = name.match(/\d{5,}_([^_]+)_([^_\[]+)/);
       camps[name] = {
         country: normalizeCountry(r["국가"]) || normalizeCountry(cm?cm[1]:"") || "기타",
-        tag: tm ? "CBT_"+tm[1] : "CBT",
+        tag: (tm ? "CBT_"+tm[1] : "CBT") + (om ? " · "+om[2] : ""),
         budget: bm ? Number(bm[1]) : 0,
         used: 0
       };
@@ -614,19 +620,18 @@ function render(){
   const cbtMap = {};
   Object.entries(actuals.cbtByCountry).forEach(([c,o])=>{ cbtMap[c] = {budget:0, used:o.used, camps:o.camps, nameBudget:o.budget}; });
   Object.entries(special.cbt).forEach(([c,b])=>{ (cbtMap[c] = cbtMap[c] || {budget:0, used:0, camps:[], nameBudget:0}).budget += b; });
-  const cbtEntries = Object.entries(cbtMap).sort((a,b)=>b[1].budget-a[1].budget);
-  let cbtHtml = "";
-  cbtEntries.forEach(([country,o])=>{
-    cbtHtml += `<tr class="datarow"><td>${country}</td><td class="muted">${o.camps.length}개</td><td>${amtBarCell(o.budget, o.used)}</td></tr>`;
-    o.camps.sort((a,b)=>a.tag.localeCompare(b.tag)).forEach(c=>{
-      cbtHtml += `<tr><td></td><td class="muted" style="font-size:12px">${c.tag}</td><td style="font-size:12px;color:var(--label)">소진 ${fmt(c.used)}</td></tr>`;
-    });
-  });
-  if(cbtEntries.length){
+  const cbtEntries = Object.entries(cbtMap).sort((x,y)=>(y[1].budget-x[1].budget)||(y[1].used-x[1].used));
+  let cbtHtml = cbtEntries.map(([country,o])=>`
+    <tr class="datarow">
+      <td>${country}</td>
+      <td>${amtBarCell(o.budget, o.used)}</td>
+      <td colspan="4"></td>
+    </tr>`).join("");
+  if(cbtEntries.length>1){
     const tb = cbtEntries.reduce((x,[,o])=>x+o.budget,0), tu = cbtEntries.reduce((x,[,o])=>x+o.used,0);
-    cbtHtml += `<tr class="tier-row"><td>합계</td><td></td><td style="text-align:left">${amtBarCell(tb,tu)}</td></tr>`;
+    cbtHtml += `<tr class="datarow" style="border-top:1px solid var(--border)"><td style="font-weight:700">합계</td><td>${amtBarCell(tb,tu)}</td><td colspan="4"></td></tr>`;
   }
-  document.getElementById("cbtTable").innerHTML = cbtHtml || `<tr><td colspan="3" class="muted">해당 월 CBT 데이터 없음</td></tr>`;
+  document.getElementById("cbtTable").innerHTML = cbtHtml || `<tr><td colspan="6" class="muted">해당 월 CBT 데이터 없음</td></tr>`;
 
   // 개별 운영 항목
   function standaloneCard(name, b, u){
